@@ -54,7 +54,7 @@ class Config:
         missing_keys = [key for key in required_keys if not getattr(cls, key)]
         
         if missing_keys:
-            raise ValueError(f"Missing required configuration: {", ".join(missing_keys)}")
+            raise ValueError(f"Missing required configuration: {', '.join(missing_keys)}")
         
         return True
 

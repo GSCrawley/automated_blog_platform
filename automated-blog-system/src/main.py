@@ -1,7 +1,7 @@
 import os
 import sys
 import json
-# DON\'T CHANGE THIS !!!
+# DON'T CHANGE THIS !!!
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from flask import Flask, send_from_directory
@@ -17,7 +17,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), \'static\'))
+app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 
 # Enable CORS for all routes
 CORS(app)
@@ -26,12 +26,12 @@ CORS(app)
 app.config.from_object(Config)
 
 # Register blueprints
-app.register_blueprint(user_bp, url_prefix=\'/api\')
-app.register_blueprint(blog_bp, url_prefix=\'/api/blog\')
+app.register_blueprint(user_bp, url_prefix='/api')
+app.register_blueprint(blog_bp, url_prefix='/api/blog')
 
 # Import and register automation blueprint
 from src.routes.automation import automation_bp
-app.register_blueprint(automation_bp, url_prefix=\'/api/automation\')
+app.register_blueprint(automation_bp, url_prefix='/api/automation')
 
 # Initialize database
 db.init_app(app)
@@ -67,8 +67,8 @@ with app.app_context():
         db.session.commit()
         logger.info("Mock products loaded into database.")
 
-@app.route(\'/\', defaults={\'path\': \'\'}) 
-@app.route(\'/<path:path>\')
+@app.route('/', defaults={'path': ''}) 
+@app.route('/<path:path>')
 def serve(path):
     static_folder_path = app.static_folder
     if static_folder_path is None:
@@ -77,19 +77,19 @@ def serve(path):
     if path != "" and os.path.exists(os.path.join(static_folder_path, path)):
         return send_from_directory(static_folder_path, path)
     else:
-        index_path = os.path.join(static_folder_path, \'index.html\')
+        index_path = os.path.join(static_folder_path, 'index.html')
         if os.path.exists(index_path):
-            return send_from_directory(static_folder_path, \'index.html\')
+            return send_from_directory(static_folder_path, 'index.html')
         else:
             return "index.html not found", 404
 
 
-if __name__ == \'__main__\':
+if __name__ == '__main__':
     # Ensure database directory exists before running the app
     db_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)), "database")
     if not os.path.exists(db_dir):
         os.makedirs(db_dir)
         logger.info(f"Created database directory: {db_dir}")
-    app.run(host=\'0.0.0.0\', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
 
 
