@@ -8,7 +8,8 @@ import {
   Settings, 
   Menu,
   X,
-  TrendingUp
+  TrendingUp,
+  Wand2
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -19,6 +20,7 @@ const Layout = ({ children }) => {
     { name: 'Dashboard', href: '/', icon: BarChart3 },
     { name: 'Products', href: '/products', icon: Package },
     { name: 'Articles', href: '/articles', icon: FileText },
+    { name: 'Generate Article', href: '/generate', icon: Wand2 },
     { name: 'Analytics', href: '/analytics', icon: TrendingUp },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];

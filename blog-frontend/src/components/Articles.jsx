@@ -18,10 +18,10 @@ const Articles = () => {
   const fetchArticles = async () => {
     setLoading(true);
     try {
-      const response = await fetch('https://5000-iw4pqtcpoonkfgfcj2eiw-21c5baed.manusvm.computer/api/blog/articles');
+      const response = await fetch('http://localhost:5000/api/blog/articles');
       const data = await response.json();
       if (data.success) {
-        setArticles(data.data);
+        setArticles(data.articles || []);
       } else {
         console.error('Error fetching articles:', data.error);
       }
@@ -38,13 +38,13 @@ const Articles = () => {
 
   const filteredArticles = articles.filter(article =>
     article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    article.status.toLowerCase().includes(searchTerm.toLowerCase())
+    (article.status && article.status.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleDelete = async (articleId) => {
     if (window.confirm('Are you sure you want to delete this article?')) {
       try {
-        const response = await fetch(`https://5000-iw4pqtcpoonkfgfcj2eiw-21c5baed.manusvm.computer/api/blog/articles/${articleId}`, {
+        const response = await fetch(`http://localhost:5000/api/blog/articles/${articleId}`, {
           method: 'DELETE',
         });
         const data = await response.json();

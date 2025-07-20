@@ -2,7 +2,7 @@
 
 ## 1. Introduction
 
-This document outlines the proposed architecture and strategic approach for building an automated, SEO-optimized blog system. The system aims to periodically generate and update articles about trending high-ticket products, integrate lucrative affiliate marketing and partnership programs, and implement a strategic marketing plan. This design builds upon the existing `seo-blog-builder` GitHub repository, leveraging its multi-agent architecture and WordPress integration capabilities, while addressing the need for dynamic content generation, trending product identification, and advanced affiliate marketing strategies.
+This document outlines the proposed architecture and strategic approach for building an automated, SEO-optimized blog system. The system aims to periodically generate and update articles about trending high-ticket products, integrate lucrative affiliate marketing and partnership programs, and implement a strategic marketing plan. This design leverages a multi-agent architecture and WordPress integration capabilities, while addressing the need for dynamic content generation, trending product identification, and advanced affiliate marketing strategies.
 
 ## 2. Core System Objectives
 

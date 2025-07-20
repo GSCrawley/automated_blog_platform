@@ -17,10 +17,10 @@ const Products = () => {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const response = await fetch('https://5000-iw4pqtcpoonkfgfcj2eiw-21c5baed.manusvm.computer/api/blog/products');
+      const response = await fetch('http://localhost:5000/api/blog/products');
       const data = await response.json();
       if (data.success) {
-        setProducts(data.data);
+        setProducts(data.products || []);
       } else {
         console.error('Error fetching products:', data.error);
       }
@@ -37,13 +37,13 @@ const Products = () => {
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase())
+    (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleDelete = async (productId) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
-        const response = await fetch(`https://5000-iw4pqtcpoonkfgfcj2eiw-21c5baed.manusvm.computer/api/blog/products/${productId}`, {
+        const response = await fetch(`http://localhost:5000/api/blog/products/${productId}`, {
           method: 'DELETE',
         });
         const data = await response.json();
