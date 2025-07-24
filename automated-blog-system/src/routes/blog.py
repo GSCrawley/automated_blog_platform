@@ -1,10 +1,18 @@
 from flask import Blueprint, request, jsonify
-from src.models.user import db
+from datetime import datetime
 from src.models.product import Product, Article
+from src.models.user import db
 from src.services.trend_analyzer import TrendAnalyzer
 from src.services.content_generator import ContentGenerator
 from src.services.seo_optimizer import SEOOptimizer
+from src.services.wordpress_service import WordPressService
+from src.config import Config
 import json
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 blog_bp = Blueprint('blog', __name__)
 
@@ -104,6 +112,29 @@ def generate_article():
         db.session.add(article)
         db.session.commit()
         
+        # Post article to WordPress if configuration is available
+        if all([Config.WORDPRESS_API_URL, Config.WORDPRESS_USERNAME, Config.WORDPRESS_PASSWORD]):
+            try:
+                logger.info(f"Posting article '{article.title}' to WordPress")
+                wordpress_service = WordPressService()
+                wp_response = wordpress_service.post_article(article)
+                
+                if wp_response['success']:
+                    # Update article with WordPress post ID
+                    article.wordpress_post_id = wp_response['wordpress_post_id']
+                    article.status = 'published'
+                    article.published_at = datetime.utcnow()
+                    db.session.commit()
+                    
+                    logger.info(f"Article posted to WordPress successfully with ID: {wp_response['wordpress_post_id']}")
+                    logger.info(f"WordPress URL: {wp_response.get('wordpress_url')}")
+                else:
+                    logger.error(f"Failed to post article to WordPress: {wp_response.get('error')}")
+            except Exception as wp_error:
+                logger.error(f"Error during WordPress integration: {str(wp_error)}")
+        else:
+            logger.warning("WordPress integration skipped: Missing configuration")
+        
         return jsonify({'success': True, 'article': article.to_dict()}), 201
         
     except Exception as e:
@@ -124,7 +155,143 @@ def keyword_research():
         keywords = seo_optimizer.research_keywords(topic)
         
         return jsonify({'success': True, 'keywords': keywords})
+    except Exception as e:  # Add this except block
+        return jsonify({'success': False, 'error': str(e)}), 500          
+    
+@blog_bp.route('/articles/<int:article_id>', methods=['PUT'])
+def update_article(article_id):
+    """Update an article."""
+    try:
+        data = request.get_json()
+        article = Article.query.get_or_404(article_id)
+        
+        # Update fields if provided
+        if 'status' in data:
+            article.status = data['status']
+        if 'title' in data:
+            article.title = data['title']
+        if 'content' in data:
+            article.content = data['content']
+        if 'meta_description' in data:
+            article.meta_description = data['meta_description']
+        
+        article.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        # Update on WordPress if it was posted there
+        if article.wordpress_post_id:
+            try:
+                logger.info(f"Updating article on WordPress (ID: {article.wordpress_post_id})")
+                wordpress_service = WordPressService()
+                wp_response = wordpress_service.update_article(article)
+                
+                if wp_response['success']:
+                    logger.info("Article updated on WordPress successfully")
+                else:
+                    logger.warning(f"Failed to update article on WordPress: {wp_response.get('error')}")
+            except Exception as wp_error:
+                logger.error(f"Error during WordPress update: {str(wp_error)}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Article updated successfully',
+            'article': article.to_dict()
+        })
         
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
+@blog_bp.route('/articles/<int:article_id>', methods=['DELETE'])
+def delete_article(article_id):
+    """Delete an article."""
+    try:
+        article = Article.query.get_or_404(article_id)
+        
+        # Delete from WordPress if it was posted there
+        if article.wordpress_post_id:
+            try:
+                logger.info(f"Deleting article from WordPress (ID: {article.wordpress_post_id})")
+                wordpress_service = WordPressService()
+                wp_response = wordpress_service.delete_article(article.wordpress_post_id)
+                
+                if wp_response['success']:
+                    logger.info("Article deleted from WordPress successfully")
+                else:
+                    logger.warning(f"Failed to delete article from WordPress: {wp_response.get('error')}")
+            except Exception as wp_error:
+                logger.error(f"Error during WordPress deletion: {str(wp_error)}")
+        
+        # Delete from database
+        db.session.delete(article)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Article deleted successfully'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@blog_bp.route('/products/<int:product_id>', methods=['PUT'])
+def update_product(product_id):
+    """Update a product."""
+    try:
+        data = request.get_json()
+        product = Product.query.get_or_404(product_id)
+        
+        # Update fields if provided
+        if 'name' in data:
+            product.name = data['name']
+        if 'description' in data:
+            product.description = data['description']
+        if 'category' in data:
+            product.category = data['category']
+        if 'price' in data:
+            product.price = data['price']
+        if 'trend_score' in data:
+            product.trend_score = data['trend_score']
+        
+        product.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Product updated successfully',
+            'product': product.to_dict()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@blog_bp.route('/products/<int:product_id>', methods=['DELETE'])
+def delete_product(product_id):
+    """Delete a product."""
+    try:
+        product = Product.query.get_or_404(product_id)
+        db.session.delete(product)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Product deleted successfully'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
