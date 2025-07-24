@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import argparse
 # DON'T CHANGE THIS !!!
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -85,11 +86,18 @@ def serve(path):
 
 
 if __name__ == '__main__':
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Run the Automated Blog System')
+    parser.add_argument('--port', type=int, default=5000, help='Port to run the server on')
+    args = parser.parse_args()
+    
     # Ensure database directory exists before running the app
     db_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)), "database")
     if not os.path.exists(db_dir):
         os.makedirs(db_dir)
         logger.info(f"Created database directory: {db_dir}")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    
+    # Run the app on the specified port
+    app.run(host='0.0.0.0', port=args.port, debug=True)
 
 

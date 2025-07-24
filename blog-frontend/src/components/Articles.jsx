@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Edit, Trash2, Search, RefreshCw, Eye, FileText } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, RefreshCw, Eye, FileText, Upload } from 'lucide-react';
+import { blogApi } from '@/services/api';
 
 const Articles = () => {
   const [articles, setArticles] = useState([]);
@@ -18,8 +19,7 @@ const Articles = () => {
   const fetchArticles = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/blog/articles');
-      const data = await response.json();
+      const data = await blogApi.getArticles();
       if (data.success) {
         setArticles(data.articles || []);
       } else {
@@ -44,10 +44,7 @@ const Articles = () => {
   const handleDelete = async (articleId) => {
     if (window.confirm('Are you sure you want to delete this article?')) {
       try {
-        const response = await fetch(`http://localhost:5000/api/blog/articles/${articleId}`, {
-          method: 'DELETE',
-        });
-        const data = await response.json();
+        const data = await blogApi.deleteArticle(articleId);
         if (data.success) {
           fetchArticles(); // Refresh the list
         } else {
@@ -61,14 +58,7 @@ const Articles = () => {
 
   const handleStatusChange = async (articleId, newStatus) => {
     try {
-      const response = await fetch(`https://5000-iw4pqtcpoonkfgfcj2eiw-21c5baed.manusvm.computer/api/blog/articles/${articleId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      const data = await response.json();
+      const data = await blogApi.updateArticle(articleId, { status: newStatus });
       if (data.success) {
         fetchArticles(); // Refresh the list
       } else {
@@ -76,6 +66,19 @@ const Articles = () => {
       }
     } catch (error) {
       console.error('Error updating article status:', error);
+    }
+  };
+
+  const handlePublishToWordPress = async (articleId) => {
+    try {
+      const data = await blogApi.publishToWordPress(articleId);
+      if (data.success) {
+        fetchArticles(); // Refresh the list
+      } else {
+        console.error('Error publishing to WordPress:', data.error);
+      }
+    } catch (error) {
+      console.error('Error publishing to WordPress:', error);
     }
   };
 
@@ -173,14 +176,22 @@ const Articles = () => {
                           <Edit className="h-4 w-4" />
                         </Button>
                         {article.status === 'draft' && (
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => handleStatusChange(article.id, 'published')}
                           >
                             <FileText className="h-4 w-4" />
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handlePublishToWordPress(article.id)}
+                          title="Publish to WordPress"
+                        >
+                          <Upload className="h-4 w-4" />
+                        </Button>
                         <Button 
                           variant="ghost" 
                           size="sm" 

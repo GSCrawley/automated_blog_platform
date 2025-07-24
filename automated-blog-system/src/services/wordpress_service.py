@@ -328,3 +328,122 @@ class WordPressService:
         
         self.logger.info(f"Final tag IDs: {tag_ids}")
         return tag_ids
+        
+    def get_categories(self):
+        """
+        Get categories from WordPress.
+        
+        Returns:
+            list: List of categories
+        """
+        self.logger.info("Getting categories from WordPress")
+        
+        try:
+            # Make API request to get categories
+            self.logger.info(f"Making request to get categories from WordPress API: {self.api_url}/categories")
+            
+            response = requests.get(
+                f"{self.api_url}/categories",
+                auth=(self.username, self.password),
+                params={"per_page": 100}  # Get up to 100 categories
+            )
+            
+            # Log response details for debugging
+            self.logger.info(f"WordPress API get categories response status: {response.status_code}")
+            
+            # For error responses, log the response content
+            if response.status_code >= 400:
+                self.logger.error(f"WordPress API get categories error response: {response.text}")
+            
+            # Check if request was successful
+            response.raise_for_status()
+            
+            # Parse response
+            categories = response.json()
+            
+            self.logger.info(f"Retrieved {len(categories)} categories from WordPress")
+            
+            return categories
+            
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Failed to get categories from WordPress: {str(e)}")
+            return []
+    
+    def get_tags(self):
+        """
+        Get tags from WordPress.
+        
+        Returns:
+            list: List of tags
+        """
+        self.logger.info("Getting tags from WordPress")
+        
+        try:
+            # Make API request to get tags
+            self.logger.info(f"Making request to get tags from WordPress API: {self.api_url}/tags")
+            
+            response = requests.get(
+                f"{self.api_url}/tags",
+                auth=(self.username, self.password),
+                params={"per_page": 100}  # Get up to 100 tags
+            )
+            
+            # Log response details for debugging
+            self.logger.info(f"WordPress API get tags response status: {response.status_code}")
+            
+            # For error responses, log the response content
+            if response.status_code >= 400:
+                self.logger.error(f"WordPress API get tags error response: {response.text}")
+            
+            # Check if request was successful
+            response.raise_for_status()
+            
+            # Parse response
+            tags = response.json()
+            
+            self.logger.info(f"Retrieved {len(tags)} tags from WordPress")
+            
+            return tags
+            
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Failed to get tags from WordPress: {str(e)}")
+            return []
+    
+    def get_settings(self):
+        """
+        Get settings from WordPress.
+        
+        Returns:
+            dict: WordPress settings
+        """
+        self.logger.info("Getting settings from WordPress")
+        
+        try:
+            # Make API request to get settings
+            self.logger.info(f"Making request to get settings from WordPress API: {self.api_url}/settings")
+            
+            response = requests.get(
+                f"{self.api_url}/settings",
+                auth=(self.username, self.password)
+            )
+            
+            # Log response details for debugging
+            self.logger.info(f"WordPress API get settings response status: {response.status_code}")
+            
+            # For error responses, log the response content
+            if response.status_code >= 400:
+                self.logger.error(f"WordPress API get settings error response: {response.text}")
+            
+            # Check if request was successful
+            response.raise_for_status()
+            
+            # Parse response
+            settings = response.json()
+            
+            self.logger.info("Retrieved settings from WordPress")
+            
+            return settings
+            
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Failed to get settings from WordPress: {str(e)}")
+            return {}

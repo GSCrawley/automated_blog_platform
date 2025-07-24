@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Wand2, FileText, TrendingUp } from 'lucide-react';
+import { Loader2, Wand2, FileText, TrendingUp, Upload } from 'lucide-react';
+import { blogApi } from '@/services/api';
 
 const GenerateArticle = () => {
   const [products, setProducts] = useState([]);
@@ -19,8 +20,7 @@ const GenerateArticle = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/blog/products');
-      const data = await response.json();
+      const data = await blogApi.getProducts();
       if (data.success) {
         setProducts(data.products || []);
       }
@@ -36,17 +36,7 @@ const GenerateArticle = () => {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/blog/generate-article', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          product_id: parseInt(selectedProduct)
-        }),
-      });
-
-      const data = await response.json();
+      const data = await blogApi.generateArticle(parseInt(selectedProduct));
       if (data.success) {
         setGeneratedArticle(data.article);
       } else {
@@ -58,6 +48,23 @@ const GenerateArticle = () => {
       alert('Error generating article. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const publishToWordPress = async () => {
+    if (!generatedArticle) return;
+    
+    try {
+      const data = await blogApi.publishToWordPress(generatedArticle.id);
+      if (data.success) {
+        alert('Article published to WordPress successfully!');
+      } else {
+        console.error('Error publishing to WordPress:', data.error);
+        alert('Error publishing to WordPress: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error publishing to WordPress:', error);
+      alert('Error publishing to WordPress. Please try again.');
     }
   };
 
@@ -182,8 +189,9 @@ const GenerateArticle = () => {
                   <Button variant="outline" size="sm">
                     Edit Article
                   </Button>
-                  <Button size="sm">
-                    Publish Article
+                  <Button size="sm" onClick={publishToWordPress}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Publish to WordPress
                   </Button>
                 </div>
               </div>

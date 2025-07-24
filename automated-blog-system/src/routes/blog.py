@@ -295,3 +295,42 @@ def delete_product(product_id):
             'success': False,
             'error': str(e)
         }), 500
+
+@blog_bp.route('/wordpress/categories', methods=['GET'])
+def get_wordpress_categories():
+    """Get WordPress categories."""
+    try:
+        if all([Config.WORDPRESS_API_URL, Config.WORDPRESS_USERNAME, Config.WORDPRESS_PASSWORD]):
+            wordpress_service = WordPressService()
+            categories = wordpress_service.get_categories()
+            return jsonify({'success': True, 'categories': categories})
+        else:
+            return jsonify({'success': False, 'error': 'WordPress configuration is incomplete'}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@blog_bp.route('/wordpress/tags', methods=['GET'])
+def get_wordpress_tags():
+    """Get WordPress tags."""
+    try:
+        if all([Config.WORDPRESS_API_URL, Config.WORDPRESS_USERNAME, Config.WORDPRESS_PASSWORD]):
+            wordpress_service = WordPressService()
+            tags = wordpress_service.get_tags()
+            return jsonify({'success': True, 'tags': tags})
+        else:
+            return jsonify({'success': False, 'error': 'WordPress configuration is incomplete'}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@blog_bp.route('/wordpress/settings', methods=['GET'])
+def get_wordpress_settings():
+    """Get WordPress settings."""
+    try:
+        if all([Config.WORDPRESS_API_URL, Config.WORDPRESS_USERNAME, Config.WORDPRESS_PASSWORD]):
+            wordpress_service = WordPressService()
+            settings = wordpress_service.get_settings()
+            return jsonify({'success': True, 'settings': settings})
+        else:
+            return jsonify({'success': False, 'error': 'WordPress configuration is incomplete'}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
