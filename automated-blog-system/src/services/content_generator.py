@@ -7,9 +7,12 @@ class ContentGenerator:
     """Service for generating SEO-optimized blog content."""
     
     def __init__(self):
-        self.openai_client = openai.OpenAI(
-            api_key=Config.OPENAI_API_KEY
-        ) if Config.OPENAI_API_KEY else None
+        if Config.OPENAI_API_KEY:
+            self.openai_client = openai.OpenAI(
+                api_key=Config.OPENAI_API_KEY
+            )
+        else:
+            self.openai_client = None
     
     def generate_article(self, product_data: Dict[str, Any]) -> Dict[str, Any]:
         """Generate a complete article for a product."""

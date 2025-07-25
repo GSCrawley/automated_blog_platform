@@ -334,3 +334,46 @@ def get_wordpress_settings():
             return jsonify({'success': False, 'error': 'WordPress configuration is incomplete'}), 400
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@blog_bp.route('/articles/<int:article_id>/wordpress-status', methods=['GET'])
+def get_article_wordpress_status(article_id):
+    """Get WordPress status for an article."""
+    try:
+        article = Article.query.get_or_404(article_id)
+        
+        if not article.wordpress_post_id:
+            return jsonify({
+                'success': True,
+                'status': 'not_published',
+                'message': 'Article not published to WordPress'
+            })
+        
+        # Get status from WordPress
+        try:
+            wordpress_service = WordPressService()
+            wp_response = wordpress_service.get_article(article.wordpress_post_id)
+            
+            if wp_response['success']:
+                wp_article = wp_response['article']
+                return jsonify({
+                    'success': True,
+                    'status': wp_article.get('status', 'unknown'),
+                    'url': wp_article.get('link'),
+                    'modified': wp_article.get('modified'),
+                    'wordpress_id': article.wordpress_post_id
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': wp_response.get('error', 'Failed to get WordPress status')
+                }), 400
+                
+        except Exception as wp_error:
+            logger.error(f"Error getting WordPress status: {str(wp_error)}")
+            return jsonify({
+                'success': False,
+                'error': str(wp_error)
+            }), 500
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
