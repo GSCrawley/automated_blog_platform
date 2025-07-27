@@ -1,427 +1,295 @@
 from flask import Blueprint, request, jsonify
-from src.models.product import db, Product, Article
-from src.services.trend_analyzer import TrendAnalyzer
-from src.services.content_generator import ContentGenerator
-from src.services.seo_optimizer import SEOOptimizer
-from src.config import Config
 import logging
+import json
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
-
 blog_bp = Blueprint('blog', __name__)
-
-# Initialize services
-trend_analyzer = TrendAnalyzer(use_mock_data=Config.USE_MOCK_DATA)
-content_generator = ContentGenerator()
-seo_optimizer = SEOOptimizer()
 
 @blog_bp.route('/trending-products', methods=['GET'])
 def get_trending_products():
-    """Get trending high-ticket products."""
+    """Get trending products from various sources."""
     try:
-        category = request.args.get('category')
-        limit = int(request.args.get('limit', 10))
+        from src.services.trend_analyzer import TrendAnalyzer
+        from src.config import Config
         
-        products = trend_analyzer.get_trending_products(category=category, limit=limit)
+        trend_analyzer = TrendAnalyzer(use_mock_data=Config.USE_MOCK_DATA)
+        products = trend_analyzer.get_trending_products()
         
         return jsonify({
             'success': True,
-            'data': products,
-            'count': len(products)
+            'products': products
         })
-    
     except Exception as e:
-        logger.error(f"Error getting trending products: {e}")
+        logger.error(f"Error fetching trending products: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@blog_bp.route('/products', methods=['GET'])
+def get_products():
+    """Get all products."""
+    try:
+        from src.models.product import Product
+        
+        niche_id = request.args.get('niche_id')
+        if niche_id:
+            products = Product.query.filter_by(niche_id=niche_id).all()
+        else:
+            products = Product.query.all()
+        
         return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+            'success': True,
+            'products': [product.to_dict() for product in products]
+        })
+    except Exception as e:
+        logger.error(f"Error fetching products: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @blog_bp.route('/products', methods=['POST'])
 def create_product():
-    """Create a new product in the database."""
+    """Create a new product."""
     try:
+        from src.models.product import Product
+        from src.models.user import db
+        
         data = request.get_json()
         
-        # Validate required fields
-        required_fields = ['name', 'category', 'price']
-        for field in required_fields:
-            if field not in data:
-                return jsonify({
-                    'success': False,
-                    'error': f'Missing required field: {field}'
-                }), 400
-        
-        # Create new product
         product = Product(
-            name=data['name'],
+            name=data.get('name'),
             description=data.get('description'),
-            category=data['category'],
-            price=data['price'],
+            category=data.get('category'),
+            price=data.get('price'),
             currency=data.get('currency', 'USD'),
-            trend_score=data.get('trend_score', 0.0),
+            trend_score=data.get('trend_score', 0),
             search_volume=data.get('search_volume', 0),
-            competition_level=data.get('competition_level'),
-            commission_rate=data.get('commission_rate'),
-            commission_type=data.get('commission_type'),
+            competition_level=data.get('competition_level', 'medium'),
+            affiliate_programs=json.dumps(data.get('affiliate_programs', [])),
+            primary_keywords=json.dumps(data.get('primary_keywords', [])),
+            secondary_keywords=json.dumps(data.get('secondary_keywords', [])),
             source_url=data.get('source_url'),
-            image_url=data.get('image_url')
+            image_url=data.get('image_url'),
+            niche_id=data.get('niche_id')
         )
-        
-        # Set JSON fields
-        if 'affiliate_programs' in data:
-            product.set_affiliate_programs(data['affiliate_programs'])
-        
-        if 'primary_keywords' in data:
-            product.set_primary_keywords(data['primary_keywords'])
-        
-        if 'secondary_keywords' in data:
-            product.set_secondary_keywords(data['secondary_keywords'])
         
         db.session.add(product)
         db.session.commit()
         
         return jsonify({
             'success': True,
-            'data': product.to_dict()
-        }), 201
-    
+            'product': product.to_dict()
+        })
     except Exception as e:
         logger.error(f"Error creating product: {e}")
-        db.session.rollback()
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@blog_bp.route('/products', methods=['GET'])
-def get_products():
-    """Get all products from the database."""
-    try:
-        page = int(request.args.get('page', 1))
-        per_page = int(request.args.get('per_page', 10))
-        category = request.args.get('category')
-        
-        query = Product.query.filter_by(is_active=True)
-        
-        if category:
-            query = query.filter_by(category=category)
-        
-        products = query.paginate(
-            page=page, 
-            per_page=per_page, 
-            error_out=False
-        )
-        
-        return jsonify({
-            'success': True,
-            'data': [product.to_dict() for product in products.items],
-            'pagination': {
-                'page': page,
-                'per_page': per_page,
-                'total': products.total,
-                'pages': products.pages
-            }
-        })
-    
-    except Exception as e:
-        logger.error(f"Error getting products: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @blog_bp.route('/products/<int:product_id>', methods=['GET'])
 def get_product(product_id):
-    """Get a specific product by ID."""
+    """Get a specific product."""
     try:
+        from src.models.product import Product
+        
         product = Product.query.get_or_404(product_id)
         return jsonify({
             'success': True,
-            'data': product.to_dict()
+            'product': product.to_dict()
         })
-    
     except Exception as e:
-        logger.error(f"Error getting product: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        logger.error(f"Error fetching product: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @blog_bp.route('/keyword-research', methods=['POST'])
-def research_keywords():
-    """Research keywords for a given topic."""
+def keyword_research():
+    """Perform keyword research for a given topic."""
     try:
+        from src.services.seo_optimizer import SEOOptimizer
+        
         data = request.get_json()
         topic = data.get('topic')
-        num_keywords = data.get('num_keywords', 20)
+        niche_id = data.get('niche_id')
         
         if not topic:
-            return jsonify({
-                'success': False,
-                'error': 'Topic is required'
-            }), 400
+            return jsonify({'success': False, 'error': 'Topic is required'}), 400
         
-        keywords = seo_optimizer.research_keywords(topic, num_keywords)
+        seo_optimizer = SEOOptimizer()
+        keywords = seo_optimizer.research_keywords(topic, niche_id=niche_id)
         
         return jsonify({
             'success': True,
-            'data': keywords
+            'keywords': keywords
         })
-    
     except Exception as e:
-        logger.error(f"Error researching keywords: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        logger.error(f"Error performing keyword research: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @blog_bp.route('/generate-article', methods=['POST'])
 def generate_article():
     """Generate an article for a product."""
     try:
+        from src.services.content_generator import ContentGenerator
+        from src.models.product import Product
+        
         data = request.get_json()
         product_id = data.get('product_id')
-        target_keywords = data.get('target_keywords', [])
+        niche_id = data.get('niche_id')
         
         if not product_id:
-            return jsonify({
-                'success': False,
-                'error': 'Product ID is required'
-            }), 400
+            return jsonify({'success': False, 'error': 'Product ID is required'}), 400
         
-        # Get product from database
         product = Product.query.get_or_404(product_id)
-        product_data = product.to_dict()
+        content_generator = ContentGenerator()
         
-        # Generate article
-        article_data = content_generator.generate_article(product_data, target_keywords)
-        
-        # Create article in database
-        article = Article(
-            title=article_data['title'],
-            slug=article_data['slug'],
-            content=article_data['content'],
-            excerpt=article_data['excerpt'],
-            meta_title=article_data['meta_title'],
-            meta_description=article_data['meta_description'],
-            focus_keyword=article_data['focus_keyword'],
-            product_id=product_id
-        )
-        
-        article.set_keywords(article_data['keywords'])
-        
-        db.session.add(article)
-        db.session.commit()
+        article_data = content_generator.generate_article(product, niche_id=niche_id)
         
         return jsonify({
             'success': True,
-            'data': {
-                'article': article.to_dict(),
-                'generation_stats': {
-                    'word_count': article_data['word_count'],
-                    'readability_score': article_data['readability_score'],
-                    'affiliate_links_count': article_data['affiliate_links_count']
-                }
-            }
-        }), 201
-    
+            'article': article_data
+        })
     except Exception as e:
         logger.error(f"Error generating article: {e}")
-        db.session.rollback()
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @blog_bp.route('/articles', methods=['GET'])
 def get_articles():
     """Get all articles."""
     try:
-        page = int(request.args.get('page', 1))
-        per_page = int(request.args.get('per_page', 10))
-        status = request.args.get('status')
+        from src.models.product import Article
         
-        query = Article.query
-        
-        if status:
-            query = query.filter_by(status=status)
-        
-        articles = query.order_by(Article.created_at.desc()).paginate(
-            page=page,
-            per_page=per_page,
-            error_out=False
-        )
+        niche_id = request.args.get('niche_id')
+        if niche_id:
+            articles = Article.query.filter_by(niche_id=niche_id).all()
+        else:
+            articles = Article.query.all()
         
         return jsonify({
             'success': True,
-            'data': [article.to_dict() for article in articles.items],
-            'pagination': {
-                'page': page,
-                'per_page': per_page,
-                'total': articles.total,
-                'pages': articles.pages
-            }
+            'articles': [article.to_dict() for article in articles]
         })
-    
     except Exception as e:
-        logger.error(f"Error getting articles: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        logger.error(f"Error fetching articles: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @blog_bp.route('/articles/<int:article_id>', methods=['GET'])
 def get_article(article_id):
-    """Get a specific article by ID."""
+    """Get a specific article."""
     try:
+        from src.models.product import Article
+        
         article = Article.query.get_or_404(article_id)
         return jsonify({
             'success': True,
-            'data': article.to_dict()
+            'article': article.to_dict()
         })
-    
     except Exception as e:
-        logger.error(f"Error getting article: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        logger.error(f"Error fetching article: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @blog_bp.route('/articles/<int:article_id>', methods=['PUT'])
 def update_article(article_id):
     """Update an article."""
     try:
+        from src.models.product import Article
+        from src.models.user import db
+        
         article = Article.query.get_or_404(article_id)
         data = request.get_json()
         
-        # Update fields
-        if 'title' in data:
-            article.title = data['title']
-        if 'content' in data:
-            article.content = data['content']
-        if 'excerpt' in data:
-            article.excerpt = data['excerpt']
-        if 'meta_title' in data:
-            article.meta_title = data['meta_title']
-        if 'meta_description' in data:
-            article.meta_description = data['meta_description']
-        if 'focus_keyword' in data:
-            article.focus_keyword = data['focus_keyword']
-        if 'status' in data:
-            article.status = data['status']
-        if 'keywords' in data:
-            article.set_keywords(data['keywords'])
+        # Update article fields
+        for field in ['title', 'content', 'meta_description', 'keywords', 'status']:
+            if field in data:
+                if field == 'keywords':
+                    setattr(article, field, json.dumps(data[field]))
+                else:
+                    setattr(article, field, data[field])
         
         article.updated_at = datetime.utcnow()
-        
         db.session.commit()
         
         return jsonify({
             'success': True,
-            'data': article.to_dict()
+            'article': article.to_dict()
         })
-    
     except Exception as e:
         logger.error(f"Error updating article: {e}")
-        db.session.rollback()
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @blog_bp.route('/optimize-content', methods=['POST'])
 def optimize_content():
     """Optimize content for SEO."""
     try:
+        from src.services.seo_optimizer import SEOOptimizer
+        
         data = request.get_json()
         content = data.get('content')
-        target_keyword = data.get('target_keyword')
+        target_keywords = data.get('target_keywords', [])
+        niche_id = data.get('niche_id')
         
-        if not content or not target_keyword:
-            return jsonify({
-                'success': False,
-                'error': 'Content and target keyword are required'
-            }), 400
+        if not content:
+            return jsonify({'success': False, 'error': 'Content is required'}), 400
         
-        optimization = seo_optimizer.optimize_content(content, target_keyword)
+        seo_optimizer = SEOOptimizer()
+        optimized_content = seo_optimizer.optimize_content(content, target_keywords, niche_id=niche_id)
         
         return jsonify({
             'success': True,
-            'data': optimization
+            'optimized_content': optimized_content
         })
-    
     except Exception as e:
         logger.error(f"Error optimizing content: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @blog_bp.route('/analyze-competition', methods=['POST'])
 def analyze_competition():
-    """Analyze competition for a keyword."""
+    """Analyze competition for given keywords."""
     try:
+        from src.services.seo_optimizer import SEOOptimizer
+        
         data = request.get_json()
-        keyword = data.get('keyword')
+        keywords = data.get('keywords', [])
+        niche_id = data.get('niche_id')
         
-        if not keyword:
-            return jsonify({
-                'success': False,
-                'error': 'Keyword is required'
-            }), 400
+        if not keywords:
+            return jsonify({'success': False, 'error': 'Keywords are required'}), 400
         
-        analysis = seo_optimizer.analyze_competition(keyword)
+        seo_optimizer = SEOOptimizer()
+        analysis = seo_optimizer.analyze_competition(keywords, niche_id=niche_id)
         
         return jsonify({
             'success': True,
-            'data': analysis
+            'analysis': analysis
         })
-    
     except Exception as e:
         logger.error(f"Error analyzing competition: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @blog_bp.route('/dashboard/stats', methods=['GET'])
 def get_dashboard_stats():
     """Get dashboard statistics."""
     try:
-        # Get basic counts
-        total_products = Product.query.filter_by(is_active=True).count()
-        total_articles = Article.query.count()
-        published_articles = Article.query.filter_by(status='published').count()
-        draft_articles = Article.query.filter_by(status='draft').count()
+        from src.models.product import Product, Article
+        from src.models.niche import Niche
         
-        # Get recent articles
-        recent_articles = Article.query.order_by(Article.created_at.desc()).limit(5).all()
+        niche_id = request.args.get('niche_id')
         
-        # Get top performing articles (mock data for now)
-        top_articles = Article.query.order_by(Article.views.desc()).limit(5).all()
+        if niche_id:
+            products_count = Product.query.filter_by(niche_id=niche_id).count()
+            articles_count = Article.query.filter_by(niche_id=niche_id).count()
+        else:
+            products_count = Product.query.count()
+            articles_count = Article.query.count()
+        
+        niches_count = Niche.query.filter_by(active=True).count()
         
         return jsonify({
             'success': True,
-            'data': {
-                'totals': {
-                    'products': total_products,
-                    'articles': total_articles,
-                    'published_articles': published_articles,
-                    'draft_articles': draft_articles
-                },
-                'recent_articles': [article.to_dict() for article in recent_articles],
-                'top_articles': [article.to_dict() for article in top_articles]
+            'stats': {
+                'products': products_count,
+                'articles': articles_count,
+                'niches': niches_count,
+                'active_campaigns': 0  # Placeholder
             }
         })
-    
     except Exception as e:
-        logger.error(f"Error getting dashboard stats: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        logger.error(f"Error fetching dashboard stats: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # Niche management routes
 @blog_bp.route('/niches', methods=['GET'])
@@ -538,3 +406,4 @@ def delete_niche(niche_id):
     except Exception as e:
         logger.error(f"Error deleting niche: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+

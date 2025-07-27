@@ -61,3 +61,4 @@ if __name__ == '__main__':
         logger.info("Database initialized successfully")
     
     app.run(host='0.0.0.0', port=5000, debug=True)
+

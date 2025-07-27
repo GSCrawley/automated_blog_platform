@@ -11,7 +11,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = f'sqlite:///{DB_PATH}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # Add this missing attribute
+    # Add the missing USE_MOCK_DATA attribute
     USE_MOCK_DATA = True  # Set to True for development, False for production
     
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
@@ -22,3 +22,4 @@ class Config:
     @classmethod
     def init_app(cls, app):
         print(f"Database will be created at: {cls.DB_PATH}")
+
