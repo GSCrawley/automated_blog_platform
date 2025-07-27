@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -8,15 +9,34 @@ import { Loader2, Wand2, FileText, TrendingUp, Upload } from 'lucide-react';
 import { blogApi } from '@/services/api';
 
 const GenerateArticle = () => {
-  const [products, setProducts] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState('');
-  const [generatedArticle, setGeneratedArticle] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [loadingProducts, setLoadingProducts] = useState(true);
+    const navigate = useNavigate();
+    const [niches, setNiches] = useState([]);
+    const [products, setProducts] = useState([]); // Added missing products state
+    const [selectedNiche, setSelectedNiche] = useState('');
+    const [selectedProduct, setSelectedProduct] = useState('');
+    const [generatedArticle, setGeneratedArticle] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [loadingProducts, setLoadingProducts] = useState(true);
+    const [error, setError] = useState(null);
 
   useEffect(() => {
+    fetchNiches();
     fetchProducts();
   }, []);
+  
+  const fetchNiches = async () => {
+    try {
+      const response = await blogApi.getNiches();
+      if (response.success) {
+        setNiches(response.niches);
+      } else {
+        setError('Failed to fetch niches');
+      }
+    } catch (error) {
+      console.error('Error fetching niches:', error);
+      setError('Error fetching niches');
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -32,20 +52,26 @@ const GenerateArticle = () => {
   };
 
   const generateArticle = async () => {
-    if (!selectedProduct) return;
+    if (!selectedNiche || !selectedProduct) return;
 
     setLoading(true);
+    setError(null);
+
     try {
-      const data = await blogApi.generateArticle(parseInt(selectedProduct));
+      const data = await blogApi.generateArticle({
+        niche_id: selectedNiche,
+        product_id: selectedProduct
+      });
+      
       if (data.success) {
-        setGeneratedArticle(data.article);
+        setGeneratedArticle(data.article); // Set the generated article in state
+        alert('Article generated successfully!');
       } else {
-        console.error('Error generating article:', data.error);
-        alert('Error generating article: ' + data.error);
+        setError(data.error || 'Failed to generate article');
       }
     } catch (error) {
       console.error('Error generating article:', error);
-      alert('Error generating article. Please try again.');
+      setError('Error generating article. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -68,6 +94,12 @@ const GenerateArticle = () => {
     }
   };
 
+  const handleEditArticle = () => {
+    if (generatedArticle) {
+      navigate(`/articles/edit/${generatedArticle.id}`);
+    }
+  };
+
   const selectedProductData = products.find(p => p.id === parseInt(selectedProduct));
 
   return (
@@ -79,31 +111,58 @@ const GenerateArticle = () => {
         </p>
       </div>
 
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
+
       <div className="grid gap-6 md:grid-cols-2">
         {/* Product Selection */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <TrendingUp className="h-5 w-5" />
-              <span>Select Product</span>
+              <span>Select Product & Niche</span>
             </CardTitle>
             <CardDescription>
-              Choose a product to generate an article for
+              Choose a product and niche to generate an article for
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-              <SelectTrigger>
-                <SelectValue placeholder={loadingProducts ? "Loading products..." : "Select a product"} />
-              </SelectTrigger>
-              <SelectContent>
-                {products.map((product) => (
-                  <SelectItem key={product.id} value={product.id.toString()}>
-                    {product.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Niche Selection */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Select Niche</label>
+              <Select value={selectedNiche} onValueChange={setSelectedNiche}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a niche" />
+                </SelectTrigger>
+                <SelectContent>
+                  {niches.map((niche) => (
+                    <SelectItem key={niche.id} value={niche.id.toString()}>
+                      {niche.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Product Selection */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Select Product</label>
+              <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingProducts ? "Loading products..." : "Select a product"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id.toString()}>
+                      {product.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             {selectedProductData && (
               <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
@@ -124,7 +183,7 @@ const GenerateArticle = () => {
 
             <Button 
               onClick={generateArticle} 
-              disabled={!selectedProduct || loading}
+              disabled={!selectedProduct || !selectedNiche || loading}
               className="w-full"
             >
               {loading ? (

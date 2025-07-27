@@ -3,6 +3,7 @@ import Layout from './components/Layout'
 import Dashboard from './components/Dashboard'
 import Products from './components/Products'
 import Articles from './components/Articles'
+import Niches from './components/Niches'
 import './App.css'
 
 function App() {
@@ -13,6 +14,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/products" element={<Products />} />
           <Route path="/articles" element={<Articles />} />
+          <Route path="/niches" element={<Niches />} />
           {/* Add other routes here as needed */}
         </Routes>
       </Layout>
@@ -21,5 +23,4 @@ function App() {
 }
 
 export default App
-
 

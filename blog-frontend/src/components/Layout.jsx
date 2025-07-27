@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { 
-  BarChart3, 
-  FileText, 
-  Package, 
-  Settings, 
+import {
+  BarChart3,
+  FileText,
+  Package,
+  Settings,
   Menu,
   X,
-  TrendingUp
+  TrendingUp,
+  Target
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -19,6 +20,7 @@ const Layout = ({ children }) => {
     { name: 'Dashboard', href: '/', icon: BarChart3 },
     { name: 'Products', href: '/products', icon: Package },
     { name: 'Articles', href: '/articles', icon: FileText },
+    { name: 'Niches', href: '/niches', icon: Target },
     { name: 'Analytics', href: '/analytics', icon: TrendingUp },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];

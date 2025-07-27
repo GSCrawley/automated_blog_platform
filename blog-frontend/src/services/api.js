@@ -3,8 +3,7 @@
  */
 
 // Base API URL - should be configurable based on environment
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000/api';
 /**
  * Generic request function with error handling
  * @param {string} endpoint - API endpoint
@@ -93,6 +92,21 @@ export const blogApi = {
   
   // Trending products
   getTrendingProducts: (limit = 10) => request(`/blog/trending-products?limit=${limit}`),
+  
+  // Niches
+  getNiches: () => request('/blog/niches'),
+  getNiche: (id) => request(`/blog/niches/${id}`),
+  createNiche: (niche) => request('/blog/niches', {
+    method: 'POST',
+    body: JSON.stringify(niche),
+  }),
+  updateNiche: (id, niche) => request(`/blog/niches/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(niche),
+  }),
+  deleteNiche: (id) => request(`/blog/niches/${id}`, {
+    method: 'DELETE',
+  }),
 };
 
 /**

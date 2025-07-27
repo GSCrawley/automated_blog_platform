@@ -9,6 +9,7 @@ from flask import Flask
 from flask_cors import CORS
 from src.config import Config
 
+
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,6 +44,14 @@ def create_app():
         print("✅ Blog blueprint registered successfully")
     except Exception as e:
         print(f"❌ Error registering blog blueprint: {e}")
+    
+     # Add this new block to register the automation blueprint
+    try:
+        from src.routes.automation import automation_bp
+        app.register_blueprint(automation_bp, url_prefix='/api/automation')
+        print("✅ Automation blueprint registered successfully")
+    except Exception as e:
+        print(f"❌ Error registering automation blueprint: {e}")
     
     # Print all registered routes
     print("\n📋 Registered routes:")
