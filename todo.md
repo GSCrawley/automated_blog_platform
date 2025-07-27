@@ -46,9 +46,9 @@
 - [x] Fix any UI issues
 
 ## Phase 5: Multi-Niche System
-- [ ] Add niche selection to database
-- [ ] Create niche management UI
-- [ ] Update content generation for niches
+- [x] Add niche selection to database
+- [x] Create niche management UI
+- [x] Update content generation for niches
 
 ## Phase 6: Niche Configuration Interface
 - [ ] Build niche selection form
@@ -76,4 +76,3 @@
 - [ ] Documentation
 - [ ] User guide
 - [ ] Handover
-
