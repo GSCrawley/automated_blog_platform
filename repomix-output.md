@@ -6381,384 +6381,6 @@ const Analytics = () => {
 export default Analytics;
 ````
 
-## File: blog-frontend/src/components/Niches.jsx
-````javascript
-import React, { useState, useEffect } from 'react';
-import { blogApi } from '../services/api';
-import { Plus, Target, Edit, Trash2, TrendingUp, Users, DollarSign } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Textarea } from './ui/textarea';
-import { Label } from './ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-
-const Niches = () => {
-  const [niches, setNiches] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingNiche, setEditingNiche] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    target_keywords: '',
-    target_audience: '',
-    content_themes: '',
-    affiliate_networks: '',
-    competition_level: 'medium',
-    profitability_score: 0,
-    monetization_strategy: ''
-  });
-
-  useEffect(() => {
-    fetchNiches();
-  }, []);
-
-  const fetchNiches = async () => {
-    try {
-      const data = await blogApi.getNiches();
-      if (data.success) {
-        setNiches(data.niches);
-      }
-    } catch (error) {
-      console.error('Error fetching niches:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      let data;
-      
-      if (editingNiche) {
-        data = await blogApi.updateNiche(editingNiche.id, formData);
-      } else {
-        data = await blogApi.createNiche(formData);
-      }
-      
-      if (data.success) {
-        fetchNiches();
-        setIsDialogOpen(false);
-        resetForm();
-      } else {
-        console.error('Error creating/updating niche:', data.error);
-      }
-    } catch (error) {
-      console.error('Error creating/updating niche:', error);
-    }
-  };
-
-  const handleEdit = (niche) => {
-    setEditingNiche(niche);
-    setFormData({
-      name: niche.name,
-      description: niche.description || '',
-      target_keywords: Array.isArray(niche.target_keywords) ? niche.target_keywords.join(', ') : niche.target_keywords || '',
-      target_audience: niche.target_audience || '',
-      content_themes: Array.isArray(niche.content_themes) ? niche.content_themes.join(', ') : niche.content_themes || '',
-      affiliate_networks: Array.isArray(niche.affiliate_networks) ? niche.affiliate_networks.join(', ') : niche.affiliate_networks || '',
-      competition_level: niche.competition_level || 'medium',
-      profitability_score: niche.profitability_score || 0,
-      monetization_strategy: niche.monetization_strategy || ''
-    });
-    setIsDialogOpen(true);
-  };
-
-  const handleDelete = async (nicheId) => {
-    if (window.confirm('Are you sure you want to delete this niche?')) {
-      try {
-        const data = await blogApi.deleteNiche(nicheId);
-        if (data.success) {
-          fetchNiches();
-        }
-      } catch (error) {
-        console.error('Error deleting niche:', error);
-      }
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      description: '',
-      target_keywords: '',
-      target_audience: '',
-      content_themes: '',
-      affiliate_networks: '',
-      competition_level: 'medium',
-      profitability_score: 0,
-      monetization_strategy: ''
-    });
-    setEditingNiche(null);
-  };
-
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading niches...</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Niche Management</h1>
-          <p className="text-gray-600 mt-2">Manage your blog niches and target markets</p>
-        </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm} className="bg-green-600 hover:bg-green-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Niche
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingNiche ? 'Edit Niche' : 'Create New Niche'}
-              </DialogTitle>
-              <p className="text-sm text-gray-600">
-                Define a new niche market for your blog content strategy.
-              </p>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Niche Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
-                    placeholder="e.g., Health Supplements"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="competition">Competition Level</Label>
-                  <Select value={formData.competition_level} onValueChange={(value) => handleInputChange('competition_level', value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                  placeholder="Describe this niche market..."
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="keywords">Target Keywords (comma-separated)</Label>
-                <Input
-                  id="keywords"
-                  value={formData.target_keywords}
-                  onChange={(e) => handleInputChange('target_keywords', e.target.value)}
-                  placeholder="health supplements, protein powder, vitamins"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="audience">Target Audience</Label>
-                <Input
-                  id="audience"
-                  value={formData.target_audience}
-                  onChange={(e) => handleInputChange('target_audience', e.target.value)}
-                  placeholder="e.g., Fitness enthusiasts, Health-conscious individuals"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="themes">Content Themes (comma-separated)</Label>
-                <Input
-                  id="themes"
-                  value={formData.content_themes}
-                  onChange={(e) => handleInputChange('content_themes', e.target.value)}
-                  placeholder="product reviews, health tips, comparisons"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="networks">Affiliate Networks (comma-separated)</Label>
-                <Input
-                  id="networks"
-                  value={formData.affiliate_networks}
-                  onChange={(e) => handleInputChange('affiliate_networks', e.target.value)}
-                  placeholder="Amazon Associates, ClickBank, ShareASale"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="score">Profitability Score (0-100)</Label>
-                  <Input
-                    id="score"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.profitability_score}
-                    onChange={(e) => handleInputChange('profitability_score', parseInt(e.target.value) || 0)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="strategy">Monetization Strategy</Label>
-                  <Textarea
-                    id="strategy"
-                    value={formData.monetization_strategy}
-                    onChange={(e) => handleInputChange('monetization_strategy', e.target.value)}
-                    placeholder="Affiliate marketing, sponsored content..."
-                    rows={2}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                  {editingNiche ? 'Update Niche' : 'Create Niche'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {niches.length === 0 ? (
-        <div className="text-center py-12">
-          <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-600 mb-2">No niches found</h3>
-          <p className="text-gray-500 mb-6">Get started by creating your first niche to organize your products and content.</p>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={resetForm} className="bg-green-600 hover:bg-green-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Your First Niche
-              </Button>
-            </DialogTrigger>
-          </Dialog>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {niches.map((niche) => (
-            <div key={niche.id} className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center">
-                  <Target className="w-6 h-6 text-blue-600 mr-2" />
-                  <h3 className="text-lg font-semibold">{niche.name}</h3>
-                </div>
-                <div className="flex space-x-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleEdit(niche)}
-                    className="p-2"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleDelete(niche.id)}
-                    className="p-2 text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {niche.description && (
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{niche.description}</p>
-              )}
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Competition</span>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    niche.competition_level === 'low' ? 'bg-green-100 text-green-800' :
-                    niche.competition_level === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {niche.competition_level}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500 flex items-center">
-                    <DollarSign className="w-4 h-4 mr-1" />
-                    Profitability
-                  </span>
-                  <span className="font-medium">{niche.profitability_score}/100</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500 flex items-center">
-                    <TrendingUp className="w-4 h-4 mr-1" />
-                    Products
-                  </span>
-                  <span className="font-medium">{niche.products_count || 0}</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500 flex items-center">
-                    <Users className="w-4 h-4 mr-1" />
-                    Articles
-                  </span>
-                  <span className="font-medium">{niche.articles_count || 0}</span>
-                </div>
-              </div>
-
-              {niche.target_keywords && niche.target_keywords.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-xs text-gray-500 mb-2">Target Keywords:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {niche.target_keywords.slice(0, 3).map((keyword, index) => (
-                      <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                        {keyword.trim()}
-                      </span>
-                    ))}
-                    {niche.target_keywords.length > 3 && (
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
-                        +{niche.target_keywords.length - 3} more
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default Niches;
-````
-
 ## File: blog-frontend/src/components/WordPressPostEditor.jsx
 ````javascript
 import { useState, useEffect } from 'react';
@@ -6911,178 +6533,6 @@ import { twMerge } from "tailwind-merge"
 export function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
-````
-
-## File: blog-frontend/src/services/api.js
-````javascript
-/**
- * Centralized API service for making requests to the backend
- */
-
-// Base API URL - should be configurable based on environment
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-
-/**
- * Generic request function with error handling
- * @param {string} endpoint - API endpoint
- * @param {Object} options - Fetch options
- * @returns {Promise<Object>} - Response data
- */
-const request = async (endpoint, options = {}) => {
-  try {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
-
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.error || 'An error occurred');
-    }
-    
-    return data;
-  } catch (error) {
-    console.error(`API Error (${endpoint}):`, error);
-    throw error;
-  }
-};
-
-/**
- * Blog API endpoints
- */
-export const blogApi = {
-  // Products
-  getProducts: () => request('/blog/products'),
-  getProduct: (id) => request(`/blog/products/${id}`),
-  createProduct: (product) => request('/blog/products', {
-    method: 'POST',
-    body: JSON.stringify(product),
-  }),
-  updateProduct: (id, product) => request(`/blog/products/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(product),
-  }),
-  deleteProduct: (id) => request(`/blog/products/${id}`, {
-    method: 'DELETE',
-  }),
-  
-  // Articles
-  getArticles: () => request('/blog/articles'),
-  getArticle: (id) => request(`/blog/articles/${id}`),
-  generateArticle: (productId) => request('/blog/generate-article', {
-    method: 'POST',
-    body: JSON.stringify({ product_id: productId }),
-  }),
-  updateArticle: (id, article) => request(`/blog/articles/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(article),
-  }),
-  deleteArticle: (id) => request(`/blog/articles/${id}`, {
-    method: 'DELETE',
-  }),
-  
-  // WordPress specific endpoints
-  getWordPressStatus: (articleId) => request(`/blog/articles/${articleId}/wordpress-status`),
-  publishToWordPress: (articleId) => request(`/blog/articles/${articleId}/publish`, {
-    method: 'POST',
-  }),
-  updateWordPressPost: (articleId, content) => request(`/blog/articles/${articleId}/wordpress-update`, {
-    method: 'PUT',
-    body: JSON.stringify(content),
-  }),
-  deleteWordPressPost: (articleId) => request(`/blog/articles/${articleId}/wordpress-delete`, {
-    method: 'DELETE',
-  }),
-  getWordPressCategories: () => request('/blog/wordpress/categories'),
-  getWordPressTags: () => request('/blog/wordpress/tags'),
-  getWordPressSettings: () => request('/blog/wordpress/settings'),
-  
-  // Keyword research
-  researchKeywords: (topic) => request('/blog/keyword-research', {
-    method: 'POST',
-    body: JSON.stringify({ topic }),
-  }),
-  
-  // Trending products
-  getTrendingProducts: (limit = 10) => request(`/blog/trending-products?limit=${limit}`),
-  
-  // Niches
-  getNiches: () => request('/blog/niches'),
-  getNiche: (id) => request(`/blog/niches/${id}`),
-  createNiche: (niche) => request('/blog/niches', {
-    method: 'POST',
-    body: JSON.stringify(niche),
-  }),
-  updateNiche: (id, niche) => request(`/blog/niches/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(niche),
-  }),
-  deleteNiche: (id) => request(`/blog/niches/${id}`, {
-    method: 'DELETE',
-  }),
-};
-
-/**
- * User API endpoints
- */
-export const userApi = {
-  getUsers: () => request('/users'),
-  getUser: (id) => request(`/users/${id}`),
-  createUser: (user) => request('/users', {
-    method: 'POST',
-    body: JSON.stringify(user),
-  }),
-  updateUser: (id, user) => request(`/users/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(user),
-  }),
-  deleteUser: (id) => request(`/users/${id}`, {
-    method: 'DELETE',
-  }),
-};
-
-/**
- * Automation API endpoints
- */
-export const automationApi = {
-  getSchedulerStatus: () => request('/automation/scheduler/status'),
-  startScheduler: () => request('/automation/scheduler/start', {
-    method: 'POST',
-  }),
-  stopScheduler: () => request('/automation/scheduler/stop', {
-    method: 'POST',
-  }),
-  triggerContentGeneration: () => request('/automation/scheduler/trigger-content-generation', {
-    method: 'POST',
-  }),
-  triggerContentUpdate: () => request('/automation/scheduler/trigger-content-update', {
-    method: 'POST',
-  }),
-};
-
-/**
- * Analytics API endpoints
- * Note: Currently using mock data in the component, but these endpoints
- * can be implemented on the backend in the future
- */
-export const analyticsApi = {
-  getOverview: () => request('/analytics/overview'),
-  getTopArticles: () => request('/analytics/top-articles'),
-  getRevenueByNiche: () => request('/analytics/revenue-by-niche'),
-  getTrafficSources: () => request('/analytics/traffic-sources'),
-};
-
-export default {
-  blogApi,
-  userApi,
-  automationApi,
-  analyticsApi,
-};
 ````
 
 ## File: blog-frontend/src/App.css
@@ -7678,48 +7128,6 @@ export default defineConfig({
     },
   },
 })
-````
-
-## File: .gitignore
-````
-# Python virtual environment
-venv/
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Node.js
-node_modules/
-npm-debug.log
-yarn-debug.log
-yarn-error.log
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# IDE files
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Build files
-dist/
-build/
-*.egg-info/
 ````
 
 ## File: project_overview_from_github.md
@@ -9372,219 +8780,382 @@ const Dashboard = () => {
 export default Dashboard
 ````
 
-## File: blog-frontend/src/components/GenerateArticle.jsx
+## File: blog-frontend/src/components/Niches.jsx
 ````javascript
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Wand2, FileText, TrendingUp, Upload } from 'lucide-react';
-import { blogApi } from '@/services/api';
+import React, { useState, useEffect } from 'react';
+import { blogApi } from '../services/api';
+import { Plus, Target, Edit, Trash2, TrendingUp, Users, DollarSign } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
+import { Label } from './ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
-const GenerateArticle = () => {
-  const [products, setProducts] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState('');
-  const [generatedArticle, setGeneratedArticle] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [loadingProducts, setLoadingProducts] = useState(true);
+const Niches = () => {
+  const [niches, setNiches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingNiche, setEditingNiche] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    target_keywords: '',
+    target_audience: '',
+    content_themes: '',
+    affiliate_networks: '',
+    competition_level: 'medium',
+    profitability_score: 0,
+    monetization_strategy: ''
+  });
 
   useEffect(() => {
-    fetchProducts();
+    fetchNiches();
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchNiches = async () => {
     try {
-      const data = await blogApi.getProducts();
+      const data = await blogApi.getNiches();
       if (data.success) {
-        setProducts(data.products || []);
+        setNiches(data.niches);
       }
     } catch (error) {
-      console.error('Error fetching products:', error);
-    } finally {
-      setLoadingProducts(false);
-    }
-  };
-
-  const generateArticle = async () => {
-    if (!selectedProduct) return;
-
-    setLoading(true);
-    try {
-      const data = await blogApi.generateArticle(parseInt(selectedProduct));
-      if (data.success) {
-        setGeneratedArticle(data.article);
-      } else {
-        console.error('Error generating article:', data.error);
-        alert('Error generating article: ' + data.error);
-      }
-    } catch (error) {
-      console.error('Error generating article:', error);
-      alert('Error generating article. Please try again.');
+      console.error('Error fetching niches:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const publishToWordPress = async () => {
-    if (!generatedArticle) return;
-    
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     try {
-      const data = await blogApi.publishToWordPress(generatedArticle.id);
-      if (data.success) {
-        alert('Article published to WordPress successfully!');
+      let data;
+      
+      if (editingNiche) {
+        data = await blogApi.updateNiche(editingNiche.id, formData);
       } else {
-        console.error('Error publishing to WordPress:', data.error);
-        alert('Error publishing to WordPress: ' + data.error);
+        data = await blogApi.createNiche(formData);
+      }
+      
+      if (data.success) {
+        fetchNiches();
+        setIsDialogOpen(false);
+        resetForm();
+      } else {
+        console.error('Error creating/updating niche:', data.error);
       }
     } catch (error) {
-      console.error('Error publishing to WordPress:', error);
-      alert('Error publishing to WordPress. Please try again.');
+      console.error('Error creating/updating niche:', error);
     }
   };
 
-  const selectedProductData = products.find(p => p.id === parseInt(selectedProduct));
+  const handleEdit = (niche) => {
+    setEditingNiche(niche);
+    setFormData({
+      name: niche.name,
+      description: niche.description || '',
+      target_keywords: Array.isArray(niche.target_keywords) ? niche.target_keywords.join(', ') : niche.target_keywords || '',
+      target_audience: niche.target_audience || '',
+      content_themes: Array.isArray(niche.content_themes) ? niche.content_themes.join(', ') : niche.content_themes || '',
+      affiliate_networks: Array.isArray(niche.affiliate_networks) ? niche.affiliate_networks.join(', ') : niche.affiliate_networks || '',
+      competition_level: niche.competition_level || 'medium',
+      profitability_score: niche.profitability_score || 0,
+      monetization_strategy: niche.monetization_strategy || ''
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = async (nicheId) => {
+    if (window.confirm('Are you sure you want to delete this niche?')) {
+      try {
+        const data = await blogApi.deleteNiche(nicheId);
+        if (data.success) {
+          fetchNiches();
+        }
+      } catch (error) {
+        console.error('Error deleting niche:', error);
+      }
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      description: '',
+      target_keywords: '',
+      target_audience: '',
+      content_themes: '',
+      affiliate_networks: '',
+      competition_level: 'medium',
+      profitability_score: 0,
+      monetization_strategy: ''
+    });
+    setEditingNiche(null);
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">Loading niches...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Generate Article</h1>
-        <p className="text-muted-foreground">
-          Create SEO-optimized articles for your products using AI.
-        </p>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Product Selection */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5" />
-              <span>Select Product</span>
-            </CardTitle>
-            <CardDescription>
-              Choose a product to generate an article for
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-              <SelectTrigger>
-                <SelectValue placeholder={loadingProducts ? "Loading products..." : "Select a product"} />
-              </SelectTrigger>
-              <SelectContent>
-                {products.map((product) => (
-                  <SelectItem key={product.id} value={product.id.toString()}>
-                    {product.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {selectedProductData && (
-              <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
-                <div>
-                  <h3 className="font-medium">{selectedProductData.name}</h3>
-                  <p className="text-sm text-muted-foreground">{selectedProductData.description}</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="secondary">{selectedProductData.category}</Badge>
-                  <Badge variant="outline">${selectedProductData.price}</Badge>
-                  <Badge variant="outline">Score: {selectedProductData.trend_score}</Badge>
-                </div>
-                <div className="text-sm">
-                  <strong>Keywords:</strong> {selectedProductData.primary_keywords?.join(', ') || 'None'}
-                </div>
-              </div>
-            )}
-
-            <Button 
-              onClick={generateArticle} 
-              disabled={!selectedProduct || loading}
-              className="w-full"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Generating Article...
-                </>
-              ) : (
-                <>
-                  <Wand2 className="h-4 w-4 mr-2" />
-                  Generate Article
-                </>
-              )}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Niche Management</h1>
+          <p className="text-gray-600 mt-2">Manage your blog niches and target markets</p>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={resetForm} className="bg-green-600 hover:bg-green-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Niche
             </Button>
-          </CardContent>
-        </Card>
-
-        {/* Article Preview */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <FileText className="h-5 w-5" />
-              <span>Generated Article</span>
-            </CardTitle>
-            <CardDescription>
-              Preview and edit your generated content
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {generatedArticle ? (
-              <div className="space-y-4">
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {editingNiche ? 'Edit Niche' : 'Create New Niche'}
+              </DialogTitle>
+              <p className="text-sm text-gray-600">
+                Define a new niche market for your blog content strategy.
+              </p>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium">Title</label>
-                  <div className="p-3 border rounded-md bg-muted/50">
-                    {generatedArticle.title}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">Meta Description</label>
-                  <div className="p-3 border rounded-md bg-muted/50 text-sm">
-                    {generatedArticle.meta_description}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">Content Preview</label>
-                  <Textarea
-                    value={generatedArticle.content.substring(0, 500) + '...'}
-                    readOnly
-                    className="min-h-[200px]"
+                  <Label htmlFor="name">Niche Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    placeholder="e.g., Health Supplements"
+                    required
                   />
                 </div>
-
-                <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                  <span>Words: {generatedArticle.word_count}</span>
-                  <span>SEO Score: {generatedArticle.seo_score}%</span>
-                  <span>Readability: {generatedArticle.readability_score}%</span>
-                </div>
-
-                <div className="flex space-x-2">
-                  <Button variant="outline" size="sm">
-                    Edit Article
-                  </Button>
-                  <Button size="sm" onClick={publishToWordPress}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Publish to WordPress
-                  </Button>
+                <div>
+                  <Label htmlFor="competition">Competition Level</Label>
+                  <Select value={formData.competition_level} onValueChange={(value) => handleInputChange('competition_level', value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Select a product and click "Generate Article" to create content.</p>
+
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  placeholder="Describe this niche market..."
+                  rows={3}
+                />
               </div>
-            )}
-          </CardContent>
-        </Card>
+
+              <div>
+                <Label htmlFor="keywords">Target Keywords (comma-separated)</Label>
+                <Input
+                  id="keywords"
+                  value={formData.target_keywords}
+                  onChange={(e) => handleInputChange('target_keywords', e.target.value)}
+                  placeholder="health supplements, protein powder, vitamins"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="audience">Target Audience</Label>
+                <Input
+                  id="audience"
+                  value={formData.target_audience}
+                  onChange={(e) => handleInputChange('target_audience', e.target.value)}
+                  placeholder="e.g., Fitness enthusiasts, Health-conscious individuals"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="themes">Content Themes (comma-separated)</Label>
+                <Input
+                  id="themes"
+                  value={formData.content_themes}
+                  onChange={(e) => handleInputChange('content_themes', e.target.value)}
+                  placeholder="product reviews, health tips, comparisons"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="networks">Affiliate Networks (comma-separated)</Label>
+                <Input
+                  id="networks"
+                  value={formData.affiliate_networks}
+                  onChange={(e) => handleInputChange('affiliate_networks', e.target.value)}
+                  placeholder="Amazon Associates, ClickBank, ShareASale"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="score">Profitability Score (0-100)</Label>
+                  <Input
+                    id="score"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.profitability_score}
+                    onChange={(e) => handleInputChange('profitability_score', parseInt(e.target.value) || 0)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="strategy">Monetization Strategy</Label>
+                  <Textarea
+                    id="strategy"
+                    value={formData.monetization_strategy}
+                    onChange={(e) => handleInputChange('monetization_strategy', e.target.value)}
+                    placeholder="Affiliate marketing, sponsored content..."
+                    rows={2}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                  {editingNiche ? 'Update Niche' : 'Create Niche'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
+
+      {niches.length === 0 ? (
+        <div className="text-center py-12">
+          <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-600 mb-2">No niches found</h3>
+          <p className="text-gray-500 mb-6">Get started by creating your first niche to organize your products and content.</p>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm} className="bg-green-600 hover:bg-green-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Your First Niche
+              </Button>
+            </DialogTrigger>
+          </Dialog>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {niches.map((niche) => (
+            <div key={niche.id} className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center">
+                  <Target className="w-6 h-6 text-blue-600 mr-2" />
+                  <h3 className="text-lg font-semibold">{niche.name}</h3>
+                </div>
+                <div className="flex space-x-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleEdit(niche)}
+                    className="p-2"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleDelete(niche.id)}
+                    className="p-2 text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {niche.description && (
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{niche.description}</p>
+              )}
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Competition</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    niche.competition_level === 'low' ? 'bg-green-100 text-green-800' :
+                    niche.competition_level === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {niche.competition_level}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500 flex items-center">
+                    <DollarSign className="w-4 h-4 mr-1" />
+                    Profitability
+                  </span>
+                  <span className="font-medium">{niche.profitability_score}/100</span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500 flex items-center">
+                    <TrendingUp className="w-4 h-4 mr-1" />
+                    Products
+                  </span>
+                  <span className="font-medium">{niche.products_count || 0}</span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500 flex items-center">
+                    <Users className="w-4 h-4 mr-1" />
+                    Articles
+                  </span>
+                  <span className="font-medium">{niche.articles_count || 0}</span>
+                </div>
+              </div>
+
+              {niche.target_keywords && niche.target_keywords.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <p className="text-xs text-gray-500 mb-2">Target Keywords:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {niche.target_keywords.slice(0, 3).map((keyword, index) => (
+                      <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                        {keyword.trim()}
+                      </span>
+                    ))}
+                    {niche.target_keywords.length > 3 && (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
+                        +{niche.target_keywords.length - 3} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
 
-export default GenerateArticle;
+export default Niches;
 ````
 
 ## File: blog-frontend/src/components/Products.jsx
@@ -9737,6 +9308,221 @@ const Products = () => {
 };
 
 export default Products;
+````
+
+## File: blog-frontend/src/services/api.js
+````javascript
+/**
+ * Centralized API service for making requests to the backend
+ */
+
+// Base API URL - should be configurable based on environment
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000/api';
+/**
+ * Generic request function with error handling
+ * @param {string} endpoint - API endpoint
+ * @param {Object} options - Fetch options
+ * @returns {Promise<Object>} - Response data
+ */
+const request = async (endpoint, options = {}) => {
+  try {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'An error occurred');
+    }
+    
+    return data;
+  } catch (error) {
+    console.error(`API Error (${endpoint}):`, error);
+    throw error;
+  }
+};
+
+/**
+ * Blog API endpoints
+ */
+export const blogApi = {
+  // Products
+  getProducts: () => request('/blog/products'),
+  getProduct: (id) => request(`/blog/products/${id}`),
+  createProduct: (product) => request('/blog/products', {
+    method: 'POST',
+    body: JSON.stringify(product),
+  }),
+  updateProduct: (id, product) => request(`/blog/products/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(product),
+  }),
+  deleteProduct: (id) => request(`/blog/products/${id}`, {
+    method: 'DELETE',
+  }),
+  
+  // Articles
+  getArticles: () => request('/blog/articles'),
+  getArticle: (id) => request(`/blog/articles/${id}`),
+  generateArticle: (productId) => request('/blog/generate-article', {
+    method: 'POST',
+    body: JSON.stringify({ product_id: productId }),
+  }),
+  updateArticle: (id, article) => request(`/blog/articles/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(article),
+  }),
+  deleteArticle: (id) => request(`/blog/articles/${id}`, {
+    method: 'DELETE',
+  }),
+  
+  // WordPress specific endpoints
+  getWordPressStatus: (articleId) => request(`/blog/articles/${articleId}/wordpress-status`),
+  publishToWordPress: (articleId) => request(`/blog/articles/${articleId}/publish`, {
+    method: 'POST',
+  }),
+  updateWordPressPost: (articleId, content) => request(`/blog/articles/${articleId}/wordpress-update`, {
+    method: 'PUT',
+    body: JSON.stringify(content),
+  }),
+  deleteWordPressPost: (articleId) => request(`/blog/articles/${articleId}/wordpress-delete`, {
+    method: 'DELETE',
+  }),
+  getWordPressCategories: () => request('/blog/wordpress/categories'),
+  getWordPressTags: () => request('/blog/wordpress/tags'),
+  getWordPressSettings: () => request('/blog/wordpress/settings'),
+  
+  // Keyword research
+  researchKeywords: (topic) => request('/blog/keyword-research', {
+    method: 'POST',
+    body: JSON.stringify({ topic }),
+  }),
+  
+  // Trending products
+  getTrendingProducts: (limit = 10) => request(`/blog/trending-products?limit=${limit}`),
+  
+  // Niches
+  getNiches: () => request('/blog/niches'),
+  getNiche: (id) => request(`/blog/niches/${id}`),
+  createNiche: (niche) => request('/blog/niches', {
+    method: 'POST',
+    body: JSON.stringify(niche),
+  }),
+  updateNiche: (id, niche) => request(`/blog/niches/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(niche),
+  }),
+  deleteNiche: (id) => request(`/blog/niches/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
+/**
+ * User API endpoints
+ */
+export const userApi = {
+  getUsers: () => request('/users'),
+  getUser: (id) => request(`/users/${id}`),
+  createUser: (user) => request('/users', {
+    method: 'POST',
+    body: JSON.stringify(user),
+  }),
+  updateUser: (id, user) => request(`/users/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(user),
+  }),
+  deleteUser: (id) => request(`/users/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
+/**
+ * Automation API endpoints
+ */
+export const automationApi = {
+  getSchedulerStatus: () => request('/automation/scheduler/status'),
+  startScheduler: () => request('/automation/scheduler/start', {
+    method: 'POST',
+  }),
+  stopScheduler: () => request('/automation/scheduler/stop', {
+    method: 'POST',
+  }),
+  triggerContentGeneration: () => request('/automation/scheduler/trigger-content-generation', {
+    method: 'POST',
+  }),
+  triggerContentUpdate: () => request('/automation/scheduler/trigger-content-update', {
+    method: 'POST',
+  }),
+};
+
+/**
+ * Analytics API endpoints
+ * Note: Currently using mock data in the component, but these endpoints
+ * can be implemented on the backend in the future
+ */
+export const analyticsApi = {
+  getOverview: () => request('/analytics/overview'),
+  getTopArticles: () => request('/analytics/top-articles'),
+  getRevenueByNiche: () => request('/analytics/revenue-by-niche'),
+  getTrafficSources: () => request('/analytics/traffic-sources'),
+};
+
+export default {
+  blogApi,
+  userApi,
+  automationApi,
+  analyticsApi,
+};
+````
+
+## File: .gitignore
+````
+# Python virtual environment
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build files
+dist/
+build/
+*.egg-info/
+
+repomix-output.md
 ````
 
 ## File: system_architecture_design.md
@@ -9946,167 +9732,278 @@ class Article(db.Model):
         return f'<Article {self.title}>'
 ````
 
-## File: blog-frontend/src/components/Layout.jsx
+## File: blog-frontend/src/components/GenerateArticle.jsx
 ````javascript
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  BarChart3,
-  FileText,
-  Package,
-  Settings,
-  Menu,
-  X,
-  TrendingUp,
-  Target
-} from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Loader2, Wand2, FileText, TrendingUp, Upload } from 'lucide-react';
+import { blogApi } from '@/services/api';
 
-const Layout = ({ children }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const location = useLocation();
+const GenerateArticle = () => {
+    const navigate = useNavigate();
+    const [niches, setNiches] = useState([]);
+    const [products, setProducts] = useState([]); // Added missing products state
+    const [selectedNiche, setSelectedNiche] = useState('');
+    const [selectedProduct, setSelectedProduct] = useState('');
+    const [generatedArticle, setGeneratedArticle] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [loadingProducts, setLoadingProducts] = useState(true);
+    const [error, setError] = useState(null);
 
-  const navigation = [
-    { name: 'Dashboard', href: '/', icon: BarChart3 },
-    { name: 'Products', href: '/products', icon: Package },
-    { name: 'Articles', href: '/articles', icon: FileText },
-    { name: 'Niches', href: '/niches', icon: Target },
-    { name: 'Analytics', href: '/analytics', icon: TrendingUp },
-    { name: 'Settings', href: '/settings', icon: Settings },
-  ];
-
-  const isActive = (href) => {
-    return location.pathname === href;
+  useEffect(() => {
+    fetchNiches();
+    fetchProducts();
+  }, []);
+  
+  const fetchNiches = async () => {
+    try {
+      const response = await blogApi.getNiches();
+      if (response.success) {
+        setNiches(response.niches);
+      } else {
+        setError('Failed to fetch niches');
+      }
+    } catch (error) {
+      console.error('Error fetching niches:', error);
+      setError('Error fetching niches');
+    }
   };
 
+  const fetchProducts = async () => {
+    try {
+      const data = await blogApi.getProducts();
+      if (data.success) {
+        setProducts(data.products || []);
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const generateArticle = async () => {
+    if (!selectedNiche || !selectedProduct) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data = await blogApi.generateArticle({
+        niche_id: selectedNiche,
+        product_id: selectedProduct
+      });
+      
+      if (data.success) {
+        setGeneratedArticle(data.article); // Set the generated article in state
+        alert('Article generated successfully!');
+      } else {
+        setError(data.error || 'Failed to generate article');
+      }
+    } catch (error) {
+      console.error('Error generating article:', error);
+      setError('Error generating article. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const publishToWordPress = async () => {
+    if (!generatedArticle) return;
+    
+    try {
+      const data = await blogApi.publishToWordPress(generatedArticle.id);
+      if (data.success) {
+        alert('Article published to WordPress successfully!');
+      } else {
+        console.error('Error publishing to WordPress:', data.error);
+        alert('Error publishing to WordPress: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error publishing to WordPress:', error);
+      alert('Error publishing to WordPress. Please try again.');
+    }
+  };
+
+  const handleEditArticle = () => {
+    if (generatedArticle) {
+      navigate(`/articles/edit/${generatedArticle.id}`);
+    }
+  };
+
+  const selectedProductData = products.find(p => p.id === parseInt(selectedProduct));
+
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      {/* Mobile sidebar */}
-      <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
-        <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white dark:bg-gray-800">
-          <div className="flex h-16 items-center justify-between px-4">
-            <h1 className="text-xl font-bold">Blog System</h1>
-            <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(false)}>
-              <X className="h-6 w-6" />
-            </Button>
-          </div>
-          <nav className="flex-1 space-y-1 px-2 py-4">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
-                    isActive(item.href)
-                      ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white'
-                  }`}
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <Icon className="mr-3 h-6 w-6 flex-shrink-0" />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Generate Article</h1>
+        <p className="text-muted-foreground">
+          Create SEO-optimized articles for your products using AI.
+        </p>
       </div>
 
-      {/* Desktop sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex flex-col flex-grow bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
-          <div className="flex h-16 items-center px-4">
-            <h1 className="text-xl font-bold">Automated Blog System</h1>
-          </div>
-          <nav className="flex-1 space-y-1 px-2 py-4">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
-                    isActive(item.href)
-                      ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white'
-                  }`}
-                >
-                  <Icon className="mr-3 h-6 w-6 flex-shrink-0" />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </nav>
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {error}
         </div>
-      </div>
+      )}
 
-      {/* Main content */}
-      <div className="lg:pl-64">
-        {/* Top bar */}
-        <div className="sticky top-0 z-40 flex h-16 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:gap-x-6 sm:px-6 lg:px-8">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="lg:hidden"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </Button>
-          
-          <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-            <div className="flex flex-1"></div>
-            <div className="flex items-center gap-x-4 lg:gap-x-6">
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Product Selection */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <TrendingUp className="h-5 w-5" />
+              <span>Select Product & Niche</span>
+            </CardTitle>
+            <CardDescription>
+              Choose a product and niche to generate an article for
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Niche Selection */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Select Niche</label>
+              <Select value={selectedNiche} onValueChange={setSelectedNiche}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a niche" />
+                </SelectTrigger>
+                <SelectContent>
+                  {niches.map((niche) => (
+                    <SelectItem key={niche.id} value={niche.id.toString()}>
+                      {niche.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </div>
-        </div>
 
-        {/* Page content */}
-        <main className="py-8">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            {children}
-          </div>
-        </main>
+            {/* Product Selection */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Select Product</label>
+              <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingProducts ? "Loading products..." : "Select a product"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id.toString()}>
+                      {product.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedProductData && (
+              <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
+                <div>
+                  <h3 className="font-medium">{selectedProductData.name}</h3>
+                  <p className="text-sm text-muted-foreground">{selectedProductData.description}</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Badge variant="secondary">{selectedProductData.category}</Badge>
+                  <Badge variant="outline">${selectedProductData.price}</Badge>
+                  <Badge variant="outline">Score: {selectedProductData.trend_score}</Badge>
+                </div>
+                <div className="text-sm">
+                  <strong>Keywords:</strong> {selectedProductData.primary_keywords?.join(', ') || 'None'}
+                </div>
+              </div>
+            )}
+
+            <Button 
+              onClick={generateArticle} 
+              disabled={!selectedProduct || !selectedNiche || loading}
+              className="w-full"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating Article...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Generate Article
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Article Preview */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <FileText className="h-5 w-5" />
+              <span>Generated Article</span>
+            </CardTitle>
+            <CardDescription>
+              Preview and edit your generated content
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {generatedArticle ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Title</label>
+                  <div className="p-3 border rounded-md bg-muted/50">
+                    {generatedArticle.title}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Meta Description</label>
+                  <div className="p-3 border rounded-md bg-muted/50 text-sm">
+                    {generatedArticle.meta_description}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Content Preview</label>
+                  <Textarea
+                    value={generatedArticle.content.substring(0, 500) + '...'}
+                    readOnly
+                    className="min-h-[200px]"
+                  />
+                </div>
+
+                <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                  <span>Words: {generatedArticle.word_count}</span>
+                  <span>SEO Score: {generatedArticle.seo_score}%</span>
+                  <span>Readability: {generatedArticle.readability_score}%</span>
+                </div>
+
+                <div className="flex space-x-2">
+                  <Button variant="outline" size="sm">
+                    Edit Article
+                  </Button>
+                  <Button size="sm" onClick={publishToWordPress}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Publish to WordPress
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Select a product and click "Generate Article" to create content.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 };
 
-export default Layout;
-````
-
-## File: blog-frontend/src/App.jsx
-````javascript
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
-import Layout from './components/Layout'
-import Dashboard from './components/Dashboard'
-import Products from './components/Products'
-import Articles from './components/Articles'
-import Niches from './components/Niches'
-import './App.css'
-
-function App() {
-  return (
-    <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/articles" element={<Articles />} />
-          <Route path="/niches" element={<Niches />} />
-          {/* Add other routes here as needed */}
-        </Routes>
-      </Layout>
-    </Router>
-  )
-}
-
-export default App
+export default GenerateArticle;
 ````
 
 ## File: blog-frontend/package.json
@@ -10603,11 +10500,174 @@ const Articles = () => {
 export default Articles;
 ````
 
+## File: blog-frontend/src/components/Layout.jsx
+````javascript
+import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import {
+  BarChart3,
+  FileText,
+  Package,
+  Settings,
+  Menu,
+  X,
+  TrendingUp,
+  Target
+} from 'lucide-react';
+
+const Layout = ({ children }) => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  const navigation = [
+    { name: 'Dashboard', href: '/', icon: BarChart3 },
+    { name: 'Products', href: '/products', icon: Package },
+    { name: 'Articles', href: '/articles', icon: FileText },
+    { name: 'Niches', href: '/niches', icon: Target },
+    { name: 'Analytics', href: '/analytics', icon: TrendingUp },
+    { name: 'Settings', href: '/settings', icon: Settings },
+  ];
+
+  const isActive = (href) => {
+    return location.pathname === href;
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+      {/* Mobile sidebar */}
+      <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white dark:bg-gray-800">
+          <div className="flex h-16 items-center justify-between px-4">
+            <h1 className="text-xl font-bold">Blog System</h1>
+            <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(false)}>
+              <X className="h-6 w-6" />
+            </Button>
+          </div>
+          <nav className="flex-1 space-y-1 px-2 py-4">
+            {navigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                    isActive(item.href)
+                      ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white'
+                  }`}
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <Icon className="mr-3 h-6 w-6 flex-shrink-0" />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </div>
+
+      {/* Desktop sidebar */}
+      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
+        <div className="flex flex-col flex-grow bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+          <div className="flex h-16 items-center px-4">
+            <h1 className="text-xl font-bold">Automated Blog System</h1>
+          </div>
+          <nav className="flex-1 space-y-1 px-2 py-4">
+            {navigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                    isActive(item.href)
+                      ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white'
+                  }`}
+                >
+                  <Icon className="mr-3 h-6 w-6 flex-shrink-0" />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="lg:pl-64">
+        {/* Top bar */}
+        <div className="sticky top-0 z-40 flex h-16 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:gap-x-6 sm:px-6 lg:px-8">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="lg:hidden"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu className="h-6 w-6" />
+          </Button>
+          
+          <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
+            <div className="flex flex-1"></div>
+            <div className="flex items-center gap-x-4 lg:gap-x-6">
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Page content */}
+        <main className="py-8">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            {children}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default Layout;
+````
+
+## File: blog-frontend/src/App.jsx
+````javascript
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
+import Layout from './components/Layout'
+import Dashboard from './components/Dashboard'
+import Products from './components/Products'
+import Articles from './components/Articles'
+import Niches from './components/Niches'
+import './App.css'
+
+function App() {
+  return (
+    <Router>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/articles" element={<Articles />} />
+          <Route path="/niches" element={<Niches />} />
+          {/* Add other routes here as needed */}
+        </Routes>
+      </Layout>
+    </Router>
+  )
+}
+
+export default App
+````
+
 ## File: todo.md
 ````markdown
 # Automated Blog Platform - Development Todo
 
-## Phase 1: Fix SQLite Database Issue
+## Phase 1: Fix SQLite Database Issue ✅
 - [x] Check current database configuration
 - [x] Fix database path and permissions
 - [x] Test database connection
@@ -10617,7 +10677,7 @@ export default Articles;
 - [x] Successfully start Flask server
 - [x] Create missing service files (trend_analyzer, content_generator, seo_optimizer, automation_scheduler)
 
-## Phase 3: Complete Frontend-Backend Integration
+## Phase 2: Complete Frontend-Backend Integration ✅
 - [x] Update Dashboard component API calls to localhost
 - [x] Fix Products component API integration
 - [x] Fix Articles component API integration
@@ -10629,12 +10689,12 @@ export default Articles;
 - [x] Add missing routes (/generate, /analytics, /settings)
 - [x] Complete frontend-backend integration
 
-## Phase 3: Test Backend API
+## Phase 3: Test Backend API ✅
 - [x] Start Flask server
 - [x] Test API endpoints
 - [x] Verify OpenAI integration
 
-## Phase 3.5: WordPress Integration
+## Phase 3.5: WordPress Integration ✅
 - [x] Implement WordPress service for posting articles
 - [x] Add tag handling for WordPress posts
 - [x] Test WordPress integration with test product
@@ -10647,109 +10707,103 @@ export default Articles;
 - [x] Ensure proper error handling for WordPress-related operations
 - [x] Test all WordPress integration features
 
-## Phase 4: Complete Frontend Integration
+## Phase 4: Complete Frontend Integration ✅
 - [x] Connect frontend to backend
 - [x] Test data flow
 - [x] Fix any UI issues
 
-## Phase 5: Multi-Niche System
+## Phase 5: Multi-Niche System ✅
 - [x] Add niche selection to database
 - [x] Create niche management UI
 - [x] Update content generation for niches
 
-## Phase 6: Niche Configuration Interface
+## Phase 6: CRUD Functionality Verification and Enhancement
+- [ ] Verify Articles CRUD functionality
+  - [ ] Test article creation form
+  - [ ] Verify article listing displays correctly
+  - [ ] Test article editing functionality
+  - [ ] Test article deletion with confirmation
+- [ ] Verify Products CRUD functionality
+  - [ ] Test product creation form
+  - [ ] Verify product listing displays correctly
+  - [ ] Test product editing functionality
+  - [ ] Test product deletion with confirmation
+- [ ] Verify Niches CRUD functionality
+  - [ ] Test niche creation form
+  - [ ] Verify niche listing displays correctly
+  - [ ] Test niche editing functionality
+  - [ ] Test niche deletion with confirmation
+- [ ] Implement comprehensive error handling for all CRUD operations
+- [ ] Add form validation for all create/edit operations
+
+## Phase 7: Niche Configuration Interface
 - [ ] Build niche selection form
 - [ ] Add niche-specific settings
 - [ ] Test niche workflows
+- [ ] Implement niche keyword management
+- [ ] Add niche performance analytics
 
-## Phase 7: Enhanced Content Generation
+## Phase 8: Enhanced Content Generation
 - [ ] Niche-specific content templates
 - [ ] Targeted keyword research
 - [ ] Affiliate link optimization
+- [ ] Implement content quality scoring
+- [ ] Add plagiarism detection
+- [ ] Create content revision history
 
-## Phase 8: Automated Site Creation
-- [x] WordPress integration API
-- [x] WordPress post management (view, update, delete)
+## Phase 9: WordPress Integration Enhancement
+- [ ] Implement WordPress plugin integration API
+  - [ ] Yoast SEO integration
+  - [ ] WooCommerce integration
+  - [ ] Jetpack analytics integration
+  - [ ] AAWP for Amazon affiliate optimization
 - [ ] WordPress site creation API
 - [ ] Template deployment
 - [ ] Domain management
+- [ ] Add WordPress media library integration
+- [ ] Implement scheduled posting functionality
 
-## Phase 9: Testing & Deployment
-- [ ] End-to-end testing
+## Phase 10: AI Agent Architecture Implementation
+- [ ] Design agent communication protocol
+- [ ] Implement Master Orchestrator Agent
+  - [ ] Create decision-making system
+  - [ ] Implement task delegation
+  - [ ] Add performance monitoring
+- [ ] Implement specialized agents:
+  - [ ] Content Research Agent
+  - [ ] SEO Optimization Agent
+  - [ ] Affiliate Marketing Agent
+  - [ ] Analytics & Reporting Agent
+  - [ ] WordPress Optimization Agent
+  - [ ] Audience Engagement Agent
+- [ ] Create shared knowledge base for agents
+- [ ] Implement agent logging and monitoring
+- [ ] Add agent performance metrics
+
+## Phase 11: MCP Server Tools Integration
+- [ ] Evaluate MCP server tools for agent enhancement
+- [ ] Design integration architecture
+- [ ] Implement connectors to MCP services
+- [ ] Set up distributed processing for agents
+- [ ] Add scaling capabilities
+- [ ] Create monitoring dashboard for MCP services
+
+## Phase 12: Testing & Deployment
+- [ ] Implement unit testing for all components
+- [ ] Create integration tests for end-to-end workflows
+- [ ] Perform performance testing
+- [ ] Optimize bottlenecks
+- [ ] Set up CI/CD pipeline
 - [ ] Production deployment
-- [ ] Performance optimization
+- [ ] Performance monitoring
 
-## Phase 10: Final Delivery
-- [ ] Documentation
-- [ ] User guide
-- [ ] Handover
-````
-
-## File: automated-blog-system/src/main.py
-````python
-import os
-import sys
-import logging
-
-# Add the parent directory to the Python path
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
-from flask import Flask
-from flask_cors import CORS
-from src.config import Config
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-def create_app():
-    app = Flask(__name__)
-    app.config.from_object(Config)
-    Config.init_app(app)  # This will print the database path
-    
-    # Initialize database
-    from src.models.user import db
-    db.init_app(app)
-    
-    # Initialize CORS
-    CORS(app)
-    
-    # Import models
-    from src.models.product import Product, Article
-    from src.models.niche import Niche
-    
-    # Register blueprints with debug prints
-    try:
-        from src.routes.user import user_bp
-        app.register_blueprint(user_bp, url_prefix='/api/user')
-        print("✅ User blueprint registered successfully")
-    except Exception as e:
-        print(f"❌ Error registering user blueprint: {e}")
-    
-    try:
-        from src.routes.blog import blog_bp
-        app.register_blueprint(blog_bp, url_prefix='/api/blog')
-        print("✅ Blog blueprint registered successfully")
-    except Exception as e:
-        print(f"❌ Error registering blog blueprint: {e}")
-    
-    # Print all registered routes
-    print("\n📋 Registered routes:")
-    for rule in app.url_map.iter_rules():
-        print(f"  {rule.methods} {rule.rule}")
-    
-    return app
-
-if __name__ == '__main__':
-    app = create_app()
-    
-    # Create tables
-    with app.app_context():
-        from src.models.user import db
-        db.create_all()
-        logger.info("Database initialized successfully")
-    
-    app.run(host='0.0.0.0', port=5000, debug=True)
+## Phase 13: Final Delivery
+- [ ] Create comprehensive documentation
+- [ ] Develop user guide
+- [ ] Create admin guide
+- [ ] Prepare video tutorials
+- [ ] System handover
+- [ ] Training sessions
 ````
 
 ## File: automated-blog-system/src/routes/blog.py
@@ -11162,4 +11216,80 @@ def delete_niche(niche_id):
     except Exception as e:
         logger.error(f"Error deleting niche: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+````
+
+## File: automated-blog-system/src/main.py
+````python
+import os
+import sys
+import logging
+
+# Add the parent directory to the Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+from flask import Flask
+from flask_cors import CORS
+from src.config import Config
+
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
+    Config.init_app(app)  # This will print the database path
+    
+    # Initialize database
+    from src.models.user import db
+    db.init_app(app)
+    
+    # Initialize CORS
+    CORS(app)
+    
+    # Import models
+    from src.models.product import Product, Article
+    from src.models.niche import Niche
+    
+    # Register blueprints with debug prints
+    try:
+        from src.routes.user import user_bp
+        app.register_blueprint(user_bp, url_prefix='/api/user')
+        print("✅ User blueprint registered successfully")
+    except Exception as e:
+        print(f"❌ Error registering user blueprint: {e}")
+    
+    try:
+        from src.routes.blog import blog_bp
+        app.register_blueprint(blog_bp, url_prefix='/api/blog')
+        print("✅ Blog blueprint registered successfully")
+    except Exception as e:
+        print(f"❌ Error registering blog blueprint: {e}")
+    
+     # Add this new block to register the automation blueprint
+    try:
+        from src.routes.automation import automation_bp
+        app.register_blueprint(automation_bp, url_prefix='/api/automation')
+        print("✅ Automation blueprint registered successfully")
+    except Exception as e:
+        print(f"❌ Error registering automation blueprint: {e}")
+    
+    # Print all registered routes
+    print("\n📋 Registered routes:")
+    for rule in app.url_map.iter_rules():
+        print(f"  {rule.methods} {rule.rule}")
+    
+    return app
+
+if __name__ == '__main__':
+    app = create_app()
+    
+    # Create tables
+    with app.app_context():
+        from src.models.user import db
+        db.create_all()
+        logger.info("Database initialized successfully")
+    
+    app.run(host='0.0.0.0', port=5000, debug=True)
 ````

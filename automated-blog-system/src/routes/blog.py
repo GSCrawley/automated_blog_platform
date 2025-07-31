@@ -96,6 +96,71 @@ def get_product(product_id):
         logger.error(f"Error fetching product: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@blog_bp.route('/products/<int:product_id>', methods=['PUT'])
+def update_product(product_id):
+    """Update a product."""
+    try:
+        from src.models.product import Product
+        from src.models.user import db
+        
+        product = Product.query.get_or_404(product_id)
+        data = request.get_json()
+        
+        # Validate required fields if provided
+        if 'name' in data and not data['name']:
+            return jsonify({'success': False, 'error': 'Product name cannot be empty'}), 400
+        if 'price' in data and (not isinstance(data['price'], (int, float)) or data['price'] < 0):
+            return jsonify({'success': False, 'error': 'Price must be a positive number'}), 400
+        
+        # Update product fields
+        for field in ['name', 'description', 'category', 'price', 'currency', 'trend_score', 
+                     'search_volume', 'competition_level', 'source_url', 'image_url', 'niche_id']:
+            if field in data:
+                setattr(product, field, data[field])
+        
+        # Handle JSON fields
+        for field in ['affiliate_programs', 'primary_keywords', 'secondary_keywords']:
+            if field in data:
+                setattr(product, field, json.dumps(data[field]))
+        
+        product.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'product': product.to_dict()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error updating product: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@blog_bp.route('/products/<int:product_id>', methods=['DELETE'])
+def delete_product(product_id):
+    """Delete a product."""
+    try:
+        from src.models.product import Product, Article
+        from src.models.user import db
+        
+        product = Product.query.get_or_404(product_id)
+        
+        # Check if there are articles associated with this product
+        articles_count = Article.query.filter_by(product_id=product_id).count()
+        if articles_count > 0:
+            return jsonify({
+                'success': False, 
+                'error': f'Cannot delete product. {articles_count} articles are associated with this product.'
+            }), 400
+        
+        db.session.delete(product)
+        db.session.commit()
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        logger.error(f"Error deleting product: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @blog_bp.route('/keyword-research', methods=['POST'])
 def keyword_research():
     """Perform keyword research for a given topic."""
@@ -182,6 +247,49 @@ def get_article(article_id):
         logger.error(f"Error fetching article: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@blog_bp.route('/articles', methods=['POST'])
+def create_article():
+    """Create a new article."""
+    try:
+        from src.models.product import Article
+        from src.models.user import db
+        
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data.get('title'):
+            return jsonify({'success': False, 'error': 'Title is required'}), 400
+        if not data.get('content'):
+            return jsonify({'success': False, 'error': 'Content is required'}), 400
+        if not data.get('product_id'):
+            return jsonify({'success': False, 'error': 'Product ID is required'}), 400
+        
+        # Create new article
+        article = Article(
+            title=data.get('title'),
+            content=data.get('content'),
+            meta_description=data.get('meta_description', ''),
+            keywords=json.dumps(data.get('keywords', [])),
+            status=data.get('status', 'draft'),
+            product_id=data.get('product_id'),
+            niche_id=data.get('niche_id'),
+            seo_score=data.get('seo_score', 0.0),
+            readability_score=data.get('readability_score', 0.0),
+            word_count=len(data.get('content', '').split())
+        )
+        
+        db.session.add(article)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'article': article.to_dict()
+        }), 201
+        
+    except Exception as e:
+        logger.error(f"Error creating article: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @blog_bp.route('/articles/<int:article_id>', methods=['PUT'])
 def update_article(article_id):
     """Update an article."""
@@ -192,13 +300,23 @@ def update_article(article_id):
         article = Article.query.get_or_404(article_id)
         data = request.get_json()
         
+        # Validate required fields if provided
+        if 'title' in data and not data['title']:
+            return jsonify({'success': False, 'error': 'Title cannot be empty'}), 400
+        if 'content' in data and not data['content']:
+            return jsonify({'success': False, 'error': 'Content cannot be empty'}), 400
+        
         # Update article fields
-        for field in ['title', 'content', 'meta_description', 'keywords', 'status']:
+        for field in ['title', 'content', 'meta_description', 'keywords', 'status', 'niche_id']:
             if field in data:
                 if field == 'keywords':
                     setattr(article, field, json.dumps(data[field]))
                 else:
                     setattr(article, field, data[field])
+        
+        # Update word count if content changed
+        if 'content' in data:
+            article.word_count = len(data['content'].split())
         
         article.updated_at = datetime.utcnow()
         db.session.commit()
@@ -209,6 +327,26 @@ def update_article(article_id):
         })
     except Exception as e:
         logger.error(f"Error updating article: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@blog_bp.route('/articles/<int:article_id>', methods=['DELETE'])
+def delete_article(article_id):
+    """Delete an article."""
+    try:
+        from src.models.product import Article
+        from src.models.user import db
+        
+        article = Article.query.get_or_404(article_id)
+        
+        # If article has a WordPress post, we might want to handle that separately
+        # For now, we'll just delete from the local database
+        db.session.delete(article)
+        db.session.commit()
+        
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        logger.error(f"Error deleting article: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @blog_bp.route('/optimize-content', methods=['POST'])
@@ -406,4 +544,3 @@ def delete_niche(niche_id):
     except Exception as e:
         logger.error(f"Error deleting niche: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
