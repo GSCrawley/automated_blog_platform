@@ -44,18 +44,24 @@ const Products = () => {
   }, []);
 
   const fetchProducts = async () => {
+    console.log('Products.jsx: Starting fetchProducts...');
     setLoading(true);
     try {
+      console.log('Products.jsx: Calling blogApi.getProducts()...');
       const data = await blogApi.getProducts();
+      console.log('Products.jsx: API Response:', data);
       if (data.success) {
+        console.log('Products.jsx: Setting products:', data.products);
         setProducts(data.products || []);
       } else {
+        console.error('Products.jsx: API returned success=false:', data.error);
         setError('Failed to fetch products: ' + data.error);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
       setError('Error fetching products. Please try again.');
     } finally {
+      console.log('Products.jsx: Setting loading=false');
       setLoading(false);
     }
   };
@@ -239,7 +245,10 @@ const Products = () => {
     setIsCreateDialogOpen(true);
   };
 
+  console.log('Products.jsx: Rendering with state:', { loading, error, productsCount: products.length, filteredCount: filteredProducts.length });
+
   if (loading) {
+    console.log('Products.jsx: Showing loading state');
     return (
       <div className="flex items-center justify-center h-64">
         <RefreshCw className="h-8 w-8 animate-spin" />

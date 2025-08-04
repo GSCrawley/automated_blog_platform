@@ -4,6 +4,12 @@ import Dashboard from './components/Dashboard'
 import Products from './components/Products'
 import Articles from './components/Articles'
 import Niches from './components/Niches'
+import ApiTest from './components/ApiTest'
+import ProductsDebug from './components/ProductsDebug'
+import UiTest from './components/UiTest'
+import ProductsSimple from './components/ProductsSimple'
+import ArticlesSimple from './components/ArticlesSimple'
+import NichesSimple from './components/NichesSimple'
 import './App.css'
 
 function App() {
@@ -12,9 +18,13 @@ function App() {
       <Layout>
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/articles" element={<Articles />} />
-          <Route path="/niches" element={<Niches />} />
+          <Route path="/products" element={<ProductsSimple />} />
+          <Route path="/articles" element={<ArticlesSimple />} />
+          <Route path="/niches" element={<NichesSimple />} />
+          <Route path="/api-test" element={<ApiTest />} />
+          <Route path="/products-debug" element={<ProductsDebug />} />
+          <Route path="/ui-test" element={<UiTest />} />
+          <Route path="/products-simple" element={<ProductsSimple />} />
           {/* Add other routes here as needed */}
         </Routes>
       </Layout>

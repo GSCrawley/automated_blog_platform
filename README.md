@@ -192,4 +192,5 @@ Priority actions:
 - WordPress API Credentials
 - Google Ads API Credentials (for Keyword Planner)
 - (Future) Affiliate Network API Keys
+
 # automated_blog_platform

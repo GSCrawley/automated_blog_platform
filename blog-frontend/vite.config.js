@@ -9,12 +9,6 @@ export default defineConfig({
     host: true,
     port: 5173,
     strictPort: true,
-    hmr: {
-      clientPort: 443,
-    },
-    allowedHosts: [
-      "5173-iw4pqtcpoonkfgfcj2eiw-21c5baed.manusvm.computer"
-    ]
   },
   plugins: [react(),tailwindcss()],
   resolve: {
