@@ -1,9 +1,12 @@
 import os
 import sys
 import logging
+import threading
 
 # Add the parent directory to the Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+# Add the core directory for agent system
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'core'))
 
 from flask import Flask
 from flask_cors import CORS
@@ -30,6 +33,13 @@ def create_app():
     from src.models.product import Product, Article
     from src.models.niche import Niche
     
+    # Import agent models
+    try:
+        from src.models.agent_models import AgentState, BlogInstance, AgentTask, MarketData, AgentDecision
+        print("✅ Agent models imported successfully")
+    except Exception as e:
+        print(f"⚠️ Agent models not available: {e}")
+    
     # Register blueprints with debug prints
     try:
         from src.routes.user import user_bp
@@ -53,6 +63,45 @@ def create_app():
     except Exception as e:
         print(f"❌ Error registering automation blueprint: {e}")
     
+    # Register agent routes
+    try:
+        from src.routes.agent_routes import agent_bp
+        app.register_blueprint(agent_bp, url_prefix='/api')
+        print("✅ Agent blueprint registered successfully")
+    except Exception as e:
+        print(f"❌ Error registering agent blueprint: {e}")
+    
+    # Initialize agent system
+    app.agent_manager = None
+    try:
+        # Import agent manager using absolute path
+        import sys
+        import os
+        
+        # Add the core directory to Python path
+        core_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'core')
+        if core_path not in sys.path:
+            sys.path.insert(0, core_path)
+        
+        from agents.agent_manager import AgentManager
+        app.agent_manager = AgentManager()
+        
+        # Start agents in a separate thread
+        def start_agents():
+            try:
+                app.agent_manager.initialize_default_agents()
+                app.agent_manager.start_all_agents()
+                print("✅ Agent system started successfully")
+            except Exception as e:
+                print(f"❌ Error starting agent system: {e}")
+        
+        agent_thread = threading.Thread(target=start_agents, daemon=True)
+        agent_thread.start()
+        print("✅ Agent system initialization started")
+    except Exception as e:
+        print(f"⚠️ Agent system not available: {e}")
+        app.agent_manager = None
+    
     # Print all registered routes
     print("\n📋 Registered routes:")
     for rule in app.url_map.iter_rules():
@@ -70,4 +119,3 @@ if __name__ == '__main__':
         logger.info("Database initialized successfully")
     
     app.run(host='0.0.0.0', port=5000, debug=True)
-
