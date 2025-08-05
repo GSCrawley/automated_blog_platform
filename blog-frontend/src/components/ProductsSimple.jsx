@@ -6,6 +6,21 @@ const ProductsSimple = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    price: '',
+    currency: 'USD',
+    category: '',
+    competition_level: 'medium',
+    trend_score: '',
+    niche_id: ''
+  });
+  const [formErrors, setFormErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(null); // Track which product is being deleted
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [showEditForm, setShowEditForm] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -32,6 +47,209 @@ const ProductsSimple = () => {
       console.log('ProductsSimple: Setting loading=false');
       setLoading(false);
     }
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.name.trim()) {
+      errors.name = 'Product name is required';
+    }
+    
+    if (!formData.price || isNaN(formData.price) || parseFloat(formData.price) <= 0) {
+      errors.price = 'Valid price is required';
+    }
+    
+    if (!formData.category.trim()) {
+      errors.category = 'Category is required';
+    }
+    
+    if (formData.trend_score && (isNaN(formData.trend_score) || parseFloat(formData.trend_score) < 0 || parseFloat(formData.trend_score) > 100)) {
+      errors.trend_score = 'Trend score must be between 0 and 100';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear error for this field when user starts typing
+    if (formErrors[name]) {
+      setFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setSubmitting(true);
+    try {
+      console.log('ProductsSimple: Creating product:', formData);
+      const response = await blogApi.createProduct({
+        ...formData,
+        price: parseFloat(formData.price),
+        trend_score: formData.trend_score ? parseFloat(formData.trend_score) : null,
+        niche_id: formData.niche_id || null
+      });
+      
+      console.log('ProductsSimple: Create response:', response);
+      if (response.success) {
+        // Add new product to the list
+        setProducts(prev => [...prev, response.product]);
+        // Reset form
+        setFormData({
+          name: '',
+          price: '',
+          currency: 'USD',
+          category: '',
+          competition_level: 'medium',
+          trend_score: '',
+          niche_id: ''
+        });
+        setShowAddForm(false);
+        setError(null);
+      } else {
+        setError('Failed to create product: ' + (response.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('ProductsSimple: Error creating product:', error);
+      setError('Error creating product. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      price: '',
+      currency: 'USD',
+      category: '',
+      competition_level: 'medium',
+      trend_score: '',
+      niche_id: ''
+    });
+    setFormErrors({});
+    setShowAddForm(false);
+  };
+
+  const handleDelete = async (product) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${product.name}"?\n\nThis action cannot be undone.`
+    );
+    
+    if (!confirmed) {
+      return;
+    }
+    
+    setDeleting(product.id);
+    try {
+      console.log('ProductsSimple: Deleting product:', product.id);
+      const response = await blogApi.deleteProduct(product.id);
+      console.log('ProductsSimple: Delete response:', response);
+      
+      if (response.success) {
+        // Remove product from the list
+        setProducts(prev => prev.filter(p => p.id !== product.id));
+        setError(null);
+      } else {
+        setError('Failed to delete product: ' + (response.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('ProductsSimple: Error deleting product:', error);
+      setError('Error deleting product. Please try again.');
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const handleEdit = (product) => {
+    console.log('ProductsSimple: Starting edit for product:', product);
+    setEditingProduct(product);
+    // Pre-populate form with existing product data
+    setFormData({
+      name: product.name || '',
+      price: product.price ? product.price.toString() : '',
+      currency: product.currency || 'USD',
+      category: product.category || '',
+      competition_level: product.competition_level || 'medium',
+      trend_score: product.trend_score ? product.trend_score.toString() : '',
+      niche_id: product.niche_id ? product.niche_id.toString() : ''
+    });
+    setFormErrors({});
+    setShowEditForm(true);
+    setShowAddForm(false); // Hide add form if open
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate required fields
+    const errors = {};
+    if (!formData.name.trim()) errors.name = 'Product name is required';
+    if (!formData.price || parseFloat(formData.price) <= 0) errors.price = 'Valid price is required';
+    if (!formData.category.trim()) errors.category = 'Category is required';
+    
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      console.log('ProductsSimple: Updating product:', editingProduct.id, formData);
+      
+      const productData = {
+        name: formData.name.trim(),
+        price: parseFloat(formData.price),
+        currency: formData.currency,
+        category: formData.category.trim(),
+        competition_level: formData.competition_level,
+        trend_score: formData.trend_score ? parseFloat(formData.trend_score) : null,
+        niche_id: formData.niche_id ? parseInt(formData.niche_id) : null
+      };
+      
+      const response = await blogApi.updateProduct(editingProduct.id, productData);
+      console.log('ProductsSimple: Update response:', response);
+      
+      if (response.success) {
+        // Update the product in the list
+        setProducts(prev => prev.map(p => 
+          p.id === editingProduct.id ? { ...p, ...productData } : p
+        ));
+        resetEditForm();
+        setError(null);
+      } else {
+        setError('Failed to update product: ' + (response.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('ProductsSimple: Error updating product:', error);
+      setError('Error updating product. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const resetEditForm = () => {
+    setFormData({
+      name: '',
+      price: '',
+      currency: 'USD',
+      category: '',
+      competition_level: 'medium',
+      trend_score: '',
+      niche_id: ''
+    });
+    setFormErrors({});
+    setEditingProduct(null);
+    setShowEditForm(false);
   };
 
   const filteredProducts = products.filter(product =>
@@ -86,13 +304,329 @@ const ProductsSimple = () => {
             🔄 Refresh
           </button>
           <button 
-            onClick={() => alert('Add Product functionality coming soon!')}
+            onClick={() => setShowAddForm(true)}
             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
           >
             ➕ Add New Product
           </button>
         </div>
       </div>
+
+      {/* Add Product Form */}
+      {showAddForm && (
+        <div className="bg-white shadow rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Add New Product</h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Product Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Product Name *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.name ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Enter product name"
+                />
+                {formErrors.name && (
+                  <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>
+                )}
+              </div>
+
+              {/* Price */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Price *
+                </label>
+                <div className="flex">
+                  <select
+                    name="currency"
+                    value={formData.currency}
+                    onChange={handleInputChange}
+                    className="px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                  </select>
+                  <input
+                    type="number"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleInputChange}
+                    step="0.01"
+                    min="0"
+                    className={`flex-1 px-3 py-2 border rounded-r-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      formErrors.price ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="0.00"
+                  />
+                </div>
+                {formErrors.price && (
+                  <p className="text-red-500 text-sm mt-1">{formErrors.price}</p>
+                )}
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Category *
+                </label>
+                <input
+                  type="text"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.category ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="e.g., Electronics, Health, etc."
+                />
+                {formErrors.category && (
+                  <p className="text-red-500 text-sm mt-1">{formErrors.category}</p>
+                )}
+              </div>
+
+              {/* Competition Level */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Competition Level
+                </label>
+                <select
+                  name="competition_level"
+                  value={formData.competition_level}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+
+              {/* Trend Score */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Trend Score (0-100)
+                </label>
+                <input
+                  type="number"
+                  name="trend_score"
+                  value={formData.trend_score}
+                  onChange={handleInputChange}
+                  min="0"
+                  max="100"
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.trend_score ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Optional trend score"
+                />
+                {formErrors.trend_score && (
+                  <p className="text-red-500 text-sm mt-1">{formErrors.trend_score}</p>
+                )}
+              </div>
+
+              {/* Niche ID */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Niche ID
+                </label>
+                <input
+                  type="number"
+                  name="niche_id"
+                  value={formData.niche_id}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Optional niche ID"
+                />
+              </div>
+            </div>
+
+            {/* Form Actions */}
+            <div className="flex gap-4 pt-4">
+              <button
+                type="submit"
+                disabled={submitting}
+                className={`px-6 py-2 rounded-md text-white font-medium ${
+                  submitting
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-500 hover:bg-blue-600'
+                }`}
+              >
+                {submitting ? 'Creating...' : 'Create Product'}
+              </button>
+              <button
+                type="button"
+                onClick={resetForm}
+                className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Edit Product Form */}
+      {showEditForm && (
+        <div className="bg-white shadow rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Edit Product</h2>
+          
+          <form onSubmit={handleEditSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Product Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Product Name *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.name ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Enter product name"
+                />
+                {formErrors.name && (
+                  <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>
+                )}
+              </div>
+
+              {/* Price */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Price *
+                </label>
+                <div className="flex">
+                  <input
+                    type="number"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleInputChange}
+                    step="0.01"
+                    min="0"
+                    className={`flex-1 px-3 py-2 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      formErrors.price ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="0.00"
+                  />
+                  <select
+                    name="currency"
+                    value={formData.currency}
+                    onChange={handleInputChange}
+                    className="px-3 py-2 border-l-0 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                  </select>
+                </div>
+                {formErrors.price && (
+                  <p className="text-red-500 text-sm mt-1">{formErrors.price}</p>
+                )}
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Category *
+                </label>
+                <input
+                  type="text"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formErrors.category ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Enter product category"
+                />
+                {formErrors.category && (
+                  <p className="text-red-500 text-sm mt-1">{formErrors.category}</p>
+                )}
+              </div>
+
+              {/* Competition Level */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Competition Level
+                </label>
+                <select
+                  name="competition_level"
+                  value={formData.competition_level}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+
+              {/* Trend Score */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Trend Score (0-100)
+                </label>
+                <input
+                  type="number"
+                  name="trend_score"
+                  value={formData.trend_score}
+                  onChange={handleInputChange}
+                  min="0"
+                  max="100"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Optional trend score"
+                />
+              </div>
+
+              {/* Niche ID */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Niche ID
+                </label>
+                <input
+                  type="number"
+                  name="niche_id"
+                  value={formData.niche_id}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Optional niche ID"
+                />
+              </div>
+            </div>
+
+            {/* Form Actions */}
+            <div className="flex gap-4 pt-4">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={`px-6 py-2 rounded-md text-white font-medium ${
+                  isSubmitting
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-500 hover:bg-blue-600'
+                }`}
+              >
+                {isSubmitting ? 'Updating...' : 'Update Product'}
+              </button>
+              <button
+                type="button"
+                onClick={resetEditForm}
+                className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <div className="bg-white shadow rounded-lg p-6">
         <h2 className="text-xl font-semibold mb-4">Product List ({filteredProducts.length})</h2>
@@ -151,20 +685,19 @@ const ProductsSimple = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button 
-                        onClick={() => alert(`Edit product: ${product.name}`)}
+                        onClick={() => handleEdit(product)}
                         className="text-indigo-600 hover:text-indigo-900 mr-3"
                       >
                         ✏️ Edit
                       </button>
                       <button 
-                        onClick={() => {
-                          if (window.confirm(`Delete product: ${product.name}?`)) {
-                            alert('Delete functionality coming soon!');
-                          }
-                        }}
-                        className="text-red-600 hover:text-red-900"
+                        onClick={() => handleDelete(product)}
+                        disabled={deleting === product.id}
+                        className={`text-red-600 hover:text-red-900 ${
+                          deleting === product.id ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
                       >
-                        🗑️ Delete
+                        {deleting === product.id ? '⏳ Deleting...' : '🗑️ Delete'}
                       </button>
                     </td>
                   </tr>
