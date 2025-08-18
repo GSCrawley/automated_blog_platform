@@ -56,6 +56,10 @@ export const blogApi = {
   // Articles
   getArticles: () => request('/blog/articles'),
   getArticle: (id) => request(`/blog/articles/${id}`),
+  createArticle: (article) => request('/blog/articles', {
+    method: 'POST',
+    body: JSON.stringify(article),
+  }),
   generateArticle: (productId) => request('/blog/generate-article', {
     method: 'POST',
     body: JSON.stringify({ product_id: productId }),
