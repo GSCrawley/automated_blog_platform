@@ -1,0 +1,170 @@
+﻿[
+  {
+    "n": {
+      "identity": 29,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Foundation",
+        "description": "Basic technical setup and infrastructure",
+        "order": 1
+      },
+      "elementId": "4:4c3c1897-f6bb-4534-996d-f7448b52f4e1:29"
+    }
+  },
+  {
+    "n": {
+      "identity": 30,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Audience Research",
+        "description": "Persona development and psychographic research",
+        "order": 2
+      },
+      "elementId": "4:4c3c1897-f6bb-4534-996d-f7448b52f4e1:30"
+    }
+  },
+  {
+    "n": {
+      "identity": 31,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Content Strategy",
+        "description": "Content planning and development",
+        "order": 3
+      },
+      "elementId": "4:4c3c1897-f6bb-4534-996d-f7448b52f4e1:31"
+    }
+  },
+  {
+    "n": {
+      "identity": 32,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Technical Optimization",
+        "description": "Technical SEO and AI optimization",
+        "order": 4
+      },
+      "elementId": "4:4c3c1897-f6bb-4534-996d-f7448b52f4e1:32"
+    }
+  },
+  {
+    "n": {
+      "identity": 33,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Community Development",
+        "description": "Building engagement and community",
+        "order": 5
+      },
+      "elementId": "4:4c3c1897-f6bb-4534-996d-f7448b52f4e1:33"
+    }
+  },
+  {
+    "n": {
+      "identity": 34,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Expansion & Scaling",
+        "description": "Multi-platform scaling and automation",
+        "order": 6
+      },
+      "elementId": "4:4c3c1897-f6bb-4534-996d-f7448b52f4e1:34"
+    }
+  },
+  {
+    "n": {
+      "identity": 42,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Foundation",
+        "description": "Basic technical setup and infrastructure",
+        "order": 1
+      },
+      "elementId": "4:4c3c1897-f6bb-4534-996d-f7448b52f4e1:42"
+    }
+  },
+  {
+    "n": {
+      "identity": 43,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Audience Research",
+        "description": "Persona development and psychographic research",
+        "order": 2
+      },
+      "elementId": "4:4c3c1897-f6bb-4534-996d-f7448b52f4e1:43"
+    }
+  },
+  {
+    "n": {
+      "identity": 118,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Content Strategy",
+        "description": "Content planning and development",
+        "order": 3
+      },
+      "elementId": "4:4c3c1897-f6bb-4534-996d-f7448b52f4e1:118"
+    }
+  },
+  {
+    "n": {
+      "identity": 119,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Technical Optimization",
+        "description": "Technical SEO and AI optimization",
+        "order": 4
+      },
+      "elementId": "4:4c3c1897-f6bb-4534-996d-f7448b52f4e1:119"
+    }
+  },
+  {
+    "n": {
+      "identity": 120,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Community Development",
+        "description": "Building engagement and community",
+        "order": 5
+      },
+      "elementId": "4:4c3c1897-f6bb-4534-996d-f7448b52f4e1:120"
+    }
+  },
+  {
+    "n": {
+      "identity": 121,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Expansion & Scaling",
+        "description": "Multi-platform scaling and automation",
+        "order": 6
+      },
+      "elementId": "4:4c3c1897-f6bb-4534-996d-f7448b52f4e1:121"
+    }
+  }
+]
