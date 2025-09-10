@@ -8,11 +8,39 @@
 
 2. Content Strategy Agent
 
-3. WordPress Manager Agent
+Rulebook reference: `docs/agent_rulebooks/content_strategy_agent.md`
+
+Initial Focus Areas:
+- Query Cluster Coverage (Ontology → Outline)
+- Psychographic Angle Selection
+- Semantic Gap Detection
+- Outline → Prompt Packaging
+
+Success Metrics (early): coverage_percent >= 80%, heading uniqueness ratio >= 0.6
+
+3. Publisher Adapter Framework - Generic publishing abstraction replacing the deprecated WordPress Manager role
 
 4. Monetization Agent
 
+Rulebook reference: `docs/agent_rulebooks/monetization_agent.md`
+
+Initial Focus Areas:
+- Offer Slot Allocation & Density Control
+- Psychographic Offer Framing
+- Conversion Funnel Gap Analysis
+
+Success Metrics: cta_density <= 0.004 per char, projected_revenue / 1k words baseline uplift
+
 5. Performance Analytics Agent
+
+Rulebook reference: `docs/agent_rulebooks/performance_analytics_agent.md`
+
+Initial Focus Areas:
+- Coverage Drift Detection
+- Engagement & Scroll Depth Correlation
+- Anomaly Detection & Alerting
+
+Success Metrics: mean_detection_lag < 10m, false_positive_rate < 5%
 
 6. Orchestrator Agent
 

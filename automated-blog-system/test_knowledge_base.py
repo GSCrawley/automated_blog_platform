@@ -12,4 +12,8 @@ def test_load_and_retrieve():
         # If we have results they should have required keys
         if results:
             for r in results:
-                assert {"score", "path", "title", "snippet"}.issubset(r.keys())
+                base_keys = {"score", "path", "title", "snippet"}
+                assert base_keys.issubset(r.keys())
+                # Metadata keys are optional but if present must be non-empty type-wise
+                if "applies_to" in r:
+                    assert isinstance(r["applies_to"], list)

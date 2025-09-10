@@ -211,22 +211,27 @@
 ## Phase 9: Knowledge Base & RAG Pipeline
 
 ### 9.1 Knowledge Base Foundations
-- [ ] Create `src/services/knowledge_base.py` loader
-- [ ] Define ontology schema (topics → intents → entities → products)
-- [ ] Ingest seed docs from `/docs` and niche research
-- [ ] Build embedding index (select model + storage format)
-- [ ] Implement hybrid retrieval (keyword + vector)
+- [x] Create `src/services/knowledge_base.py` loader
+- [x] Draft ontology doc `docs/knowledge_architecture.md` (Category > Lever > Tactic)
+- [ ] Expand ontology (add intents/entities mapping + 12 tactic JSON records)
+- [ ] Ingest seed docs with metadata parsing (category, lever, applies_to)
+- [ ] Build embedding index (model selection + storage format)
+- [ ] Implement hybrid retrieval (keyword + vector fusion)
 
 ### 9.2 RAG Content Generation
 - [ ] Draft prompt templates (outline, draft, optimize)
-- [ ] Add retrieval hook to content generator
-- [ ] Add semantic coverage scoring
+- [ ] Add retrieval hook to content generator (filter by agent + category)
+- [ ] Add semantic coverage scoring service
 - [ ] Add hallucination guardrails (source citation requirement)
 
 ### 9.3 Feedback & Iteration Loop
 - [ ] Define metrics: topical coverage, semantic density, entity recall
 - [ ] Store generation metadata for later optimization
 - [ ] Implement improvement suggestion agent task
+
+### 9.4 Agent Rulebooks (New)
+- [x] Add initial rulebooks (Content Strategy, Monetization, Performance Analytics)
+- [ ] Add rulebook driven validation hooks (pre-generation & post-analysis)
 
 ## Phase 10: Multi-Blog Management System (Headless)
 
