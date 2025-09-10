@@ -34,32 +34,27 @@ class AgentState(db.Model):
         }
 
 class BlogInstance(db.Model):
-    """Model to manage multiple blog instances"""
+    """Model to manage multiple blog instances (headless - decoupled from CMS)."""
     __tablename__ = 'blog_instances'
-    
+
     id = Column(Integer, primary_key=True)
     name = Column(String(200), nullable=False)
-    wordpress_url = Column(String(500), nullable=False)
-    wordpress_username = Column(String(100))
-    wordpress_app_password = Column(String(200))
     niche_id = Column(Integer, ForeignKey('niches.id'), nullable=False)
     assigned_agents = Column(JSON, default=[])  # List of agent names assigned to this blog
     status = Column(String(50), default='active')  # active, paused, error, maintenance
     performance_data = Column(JSON, default={})
-    settings = Column(JSON, default={})  # Blog-specific settings
+    settings = Column(JSON, default={})  # Blog-specific settings / future CMS mapping
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationships
     niche = relationship('Niche', backref='blog_instances')
     agent_states = relationship('AgentState', backref='blog_instance')
-    
+
     def to_dict(self):
         return {
             'id': self.id,
             'name': self.name,
-            'wordpress_url': self.wordpress_url,
-            'wordpress_username': self.wordpress_username,
             'niche_id': self.niche_id,
             'niche_name': self.niche.name if self.niche else None,
             'assigned_agents': self.assigned_agents,

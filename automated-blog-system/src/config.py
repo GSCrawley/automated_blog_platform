@@ -15,9 +15,7 @@ class Config:
     USE_MOCK_DATA = True  # Set to True for development, False for production
     
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-    WORDPRESS_URL = os.getenv('WORDPRESS_URL')
-    WORDPRESS_USERNAME = os.getenv('WORDPRESS_USERNAME')
-    WORDPRESS_PASSWORD = os.getenv('WORDPRESS_PASSWORD')
+    # WordPress credentials removed in headless architecture pivot
     
     @classmethod
     def init_app(cls, app):

@@ -72,21 +72,7 @@ export const blogApi = {
     method: 'DELETE',
   }),
   
-  // WordPress specific endpoints
-  getWordPressStatus: (articleId) => request(`/blog/articles/${articleId}/wordpress-status`),
-  publishToWordPress: (articleId) => request(`/blog/articles/${articleId}/publish`, {
-    method: 'POST',
-  }),
-  updateWordPressPost: (articleId, content) => request(`/blog/articles/${articleId}/wordpress-update`, {
-    method: 'PUT',
-    body: JSON.stringify(content),
-  }),
-  deleteWordPressPost: (articleId) => request(`/blog/articles/${articleId}/wordpress-delete`, {
-    method: 'DELETE',
-  }),
-  getWordPressCategories: () => request('/blog/wordpress/categories'),
-  getWordPressTags: () => request('/blog/wordpress/tags'),
-  getWordPressSettings: () => request('/blog/wordpress/settings'),
+  // WordPress endpoints removed in headless pivot
   
   // Keyword research
   researchKeywords: (topic) => request('/blog/keyword-research', {

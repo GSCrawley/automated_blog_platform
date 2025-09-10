@@ -1,5 +1,5 @@
 # First Niche: Men's Health
-Note: This analysis focuses on men's health and wellness products. The automated-blog-platform is not being built for this niche alone; the information in this analysis should only applied to the blog that will be built specifically for this niche. 
+Note: This analysis focuses on men's health and wellness products. ** The automated-blog-platform is not being built for this niche alone; the information in this analysis should only applied to the blog that will be built specifically for this niche. **
 
 # **Men's Health Affiliate Marketing: The $2.57 Trillion Opportunity**
 

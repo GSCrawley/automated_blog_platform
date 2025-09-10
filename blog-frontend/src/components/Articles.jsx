@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import WordPressPostEditor from './WordPressPostEditor';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Edit, Trash2, Search, RefreshCw, Eye, FileText, Upload, ExternalLink, AlertTriangle, Check, X, Pencil } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, RefreshCw, Eye, FileText } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -19,12 +18,7 @@ const Articles = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [wordpressStatuses, setWordpressStatuses] = useState({});
-  const [loadingWordpressStatus, setLoadingWordpressStatus] = useState({});
-  const [selectedArticle, setSelectedArticle] = useState(null);
-  const [isWordPressEditorOpen, setIsWordPressEditorOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [deletingWordPress, setDeletingWordPress] = useState(false);
+  // Removed WordPress related state
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -40,7 +34,7 @@ const Articles = () => {
     primary_keywords: '',
     secondary_keywords: '',
     meta_description: '',
-    publish_to_wordpress: false
+  // WordPress field removed
   });
 
   useEffect(() => {
@@ -48,35 +42,7 @@ const Articles = () => {
     fetchProducts();
   }, []);
 
-  // Fetch WordPress status for each article
-  useEffect(() => {
-    const fetchWordPressStatuses = async () => {
-      const statuses = {};
-      
-      for (const article of articles) {
-        if (article.wordpress_post_id) {
-          try {
-            setLoadingWordpressStatus(prev => ({ ...prev, [article.id]: true }));
-            const data = await blogApi.getWordPressStatus(article.id);
-            if (data.success) {
-              statuses[article.id] = data.status;
-            }
-          } catch (error) {
-            console.error(`Error fetching WordPress status for article ${article.id}:`, error);
-            statuses[article.id] = 'error';
-          } finally {
-            setLoadingWordpressStatus(prev => ({ ...prev, [article.id]: false }));
-          }
-        }
-      }
-      
-      setWordpressStatuses(statuses);
-    };
-
-    if (articles.length > 0) {
-      fetchWordPressStatuses();
-    }
-  }, [articles]);
+  // Removed WordPress status effect
 
   const fetchArticles = async () => {
     setLoading(true);
@@ -144,47 +110,7 @@ const Articles = () => {
     }
   };
 
-  const handlePublishToWordPress = async (articleId) => {
-    try {
-      const data = await blogApi.publishToWordPress(articleId);
-      if (data.success) {
-        fetchArticles(); // Refresh the list
-      } else {
-        console.error('Error publishing to WordPress:', data.error);
-      }
-    } catch (error) {
-      console.error('Error publishing to WordPress:', error);
-    }
-  };
-
-  const handleEditWordPressPost = (article) => {
-    setSelectedArticle(article);
-    setIsWordPressEditorOpen(true);
-  };
-
-  const handleDeleteWordPressPost = async () => {
-    if (!selectedArticle) return;
-    
-    setDeletingWordPress(true);
-    try {
-      const data = await blogApi.deleteWordPressPost(selectedArticle.id);
-      if (data.success) {
-        setIsDeleteDialogOpen(false);
-        fetchArticles(); // Refresh the list
-      } else {
-        console.error('Error deleting WordPress post:', data.error);
-      }
-    } catch (error) {
-      console.error('Error deleting WordPress post:', error);
-    } finally {
-      setDeletingWordPress(false);
-    }
-  };
-
-  const openDeleteDialog = (article) => {
-    setSelectedArticle(article);
-    setIsDeleteDialogOpen(true);
-  };
+  // Removed WordPress publish/edit/delete handlers
 
   const handleCreateArticle = async () => {
     setCreating(true);
@@ -200,7 +126,7 @@ const Articles = () => {
           primary_keywords: '',
           secondary_keywords: '',
           meta_description: '',
-          publish_to_wordpress: false
+      
         });
         fetchArticles(); // Refresh the list
       } else {
@@ -232,7 +158,7 @@ const Articles = () => {
       primary_keywords: article.primary_keywords || '',
       secondary_keywords: article.secondary_keywords || '',
       meta_description: article.meta_description || '',
-      publish_to_wordpress: false
+      
     });
     setIsEditDialogOpen(true);
   };
@@ -254,7 +180,7 @@ const Articles = () => {
           primary_keywords: '',
           secondary_keywords: '',
           meta_description: '',
-          publish_to_wordpress: false
+          
         });
         fetchArticles(); // Refresh the list
       } else {
@@ -276,31 +202,7 @@ const Articles = () => {
     return <Badge variant={variants[status] || 'secondary'}>{status}</Badge>;
   };
 
-  const getWordPressBadge = (article) => {
-    if (loadingWordpressStatus[article.id]) {
-      return <Badge variant="outline" className="ml-2 bg-slate-100"><RefreshCw className="h-3 w-3 mr-1 animate-spin" />WordPress</Badge>;
-    }
-    
-    if (!article.wordpress_post_id) {
-      return <Badge variant="outline" className="ml-2 bg-slate-100"><X className="h-3 w-3 mr-1" />Not on WordPress</Badge>;
-    }
-    
-    const wpStatus = wordpressStatuses[article.id];
-    
-    if (wpStatus === 'error') {
-      return <Badge variant="destructive" className="ml-2"><AlertTriangle className="h-3 w-3 mr-1" />WordPress Error</Badge>;
-    }
-    
-    if (wpStatus === 'publish') {
-      return <Badge variant="default" className="ml-2 bg-green-600"><Check className="h-3 w-3 mr-1" />WordPress Published</Badge>;
-    }
-    
-    if (wpStatus === 'draft') {
-      return <Badge variant="secondary" className="ml-2"><FileText className="h-3 w-3 mr-1" />WordPress Draft</Badge>;
-    }
-    
-    return <Badge variant="outline" className="ml-2 bg-slate-100">WordPress</Badge>;
-  };
+  // Removed WordPress badge logic
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -377,7 +279,6 @@ const Articles = () => {
                       </TableCell>
                       <TableCell>
                         {getStatusBadge(article.status)}
-                        {getWordPressBadge(article)}
                       </TableCell>
                       <TableCell>{article.views || 0}</TableCell>
                       <TableCell>${(article.revenue || 0).toFixed(2)}</TableCell>
@@ -399,43 +300,7 @@ const Articles = () => {
                               <FileText className="h-4 w-4" />
                             </Button>
                           )}
-                          {!article.wordpress_post_id ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handlePublishToWordPress(article.id)}
-                              title="Publish to WordPress"
-                            >
-                              <Upload className="h-4 w-4" />
-                            </Button>
-                          ) : (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => window.open(`${article.wordpress_url}`, '_blank')}
-                                title="View on WordPress"
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditWordPressPost(article)}
-                                title="Edit WordPress Post"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openDeleteDialog(article)}
-                                title="Delete from WordPress"
-                              >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </>
-                          )}
+                          {/* WordPress action buttons removed */}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -460,15 +325,7 @@ const Articles = () => {
         </Card>
       </div>
 
-      {/* WordPress Post Editor Dialog */}
-    {selectedArticle && (
-      <WordPressPostEditor
-        article={selectedArticle}
-        isOpen={isWordPressEditorOpen}
-        onClose={() => setIsWordPressEditorOpen(false)}
-        onSuccess={fetchArticles}
-      />
-    )}
+  {/* WordPress editor removed */}
 
     {/* Create Article Dialog */}
     <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -476,7 +333,7 @@ const Articles = () => {
         <DialogHeader>
           <DialogTitle>Create New Article</DialogTitle>
           <DialogDescription>
-            Create a new SEO-optimized article with optional WordPress publishing.
+            Create a new SEO-optimized article.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -558,16 +415,7 @@ const Articles = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center space-x-2 pt-6">
-              <input
-                type="checkbox"
-                id="publish_to_wordpress"
-                checked={formData.publish_to_wordpress}
-                onChange={(e) => handleFormChange('publish_to_wordpress', e.target.checked)}
-                className="rounded"
-              />
-              <Label htmlFor="publish_to_wordpress">Publish to WordPress</Label>
-            </div>
+            {/* WordPress publish checkbox removed */}
           </div>
         </div>
         <DialogFooter>
@@ -730,16 +578,7 @@ const Articles = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center space-x-2 pt-6">
-              <input
-                type="checkbox"
-                id="edit_publish_to_wordpress"
-                checked={formData.publish_to_wordpress}
-                onChange={(e) => handleFormChange('publish_to_wordpress', e.target.checked)}
-                className="rounded"
-              />
-              <Label htmlFor="edit_publish_to_wordpress">Update WordPress</Label>
-            </div>
+            {/* WordPress update checkbox removed */}
           </div>
         </div>
         <DialogFooter>
@@ -753,28 +592,7 @@ const Articles = () => {
       </DialogContent>
     </Dialog>
 
-    {/* Delete WordPress Post Confirmation Dialog */}
-    <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete WordPress Post</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to delete this post from WordPress? This action cannot be undone.
-            The article will remain in your local database.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={deletingWordPress}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleDeleteWordPressPost}
-            disabled={deletingWordPress}
-            className="bg-red-600 hover:bg-red-700"
-          >
-            {deletingWordPress ? 'Deleting...' : 'Delete'}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+  {/* WordPress delete dialog removed */}
     </>
   );
 };

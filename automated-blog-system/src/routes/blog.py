@@ -338,8 +338,7 @@ def delete_article(article_id):
         
         article = Article.query.get_or_404(article_id)
         
-        # If article has a WordPress post, we might want to handle that separately
-        # For now, we'll just delete from the local database
+    # Deleted directly (external CMS integration removed)
         db.session.delete(article)
         db.session.commit()
         

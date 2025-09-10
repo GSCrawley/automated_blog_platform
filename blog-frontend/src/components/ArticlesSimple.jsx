@@ -116,7 +116,7 @@ const ArticlesSimple = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WordPress</th>
+                  {/* WordPress column removed */}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -144,13 +144,7 @@ const ArticlesSimple = () => {
                         {article.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {article.wordpress_post_id ? (
-                        <span className="text-green-600">✅ Published</span>
-                      ) : (
-                        <span className="text-gray-400">Not published</span>
-                      )}
-                    </td>
+                    {/* WordPress status removed */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {article.created_at ? new Date(article.created_at).toLocaleDateString() : 'N/A'}
                     </td>

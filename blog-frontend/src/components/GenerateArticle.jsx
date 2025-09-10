@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Wand2, FileText, TrendingUp, Upload } from 'lucide-react';
+import { Loader2, Wand2, FileText, TrendingUp } from 'lucide-react';
 import { blogApi } from '@/services/api';
 
 const GenerateArticle = () => {
@@ -74,23 +74,6 @@ const GenerateArticle = () => {
       setError('Error generating article. Please try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const publishToWordPress = async () => {
-    if (!generatedArticle) return;
-    
-    try {
-      const data = await blogApi.publishToWordPress(generatedArticle.id);
-      if (data.success) {
-        alert('Article published to WordPress successfully!');
-      } else {
-        console.error('Error publishing to WordPress:', data.error);
-        alert('Error publishing to WordPress: ' + data.error);
-      }
-    } catch (error) {
-      console.error('Error publishing to WordPress:', error);
-      alert('Error publishing to WordPress. Please try again.');
     }
   };
 
@@ -244,13 +227,9 @@ const GenerateArticle = () => {
                   <span>Readability: {generatedArticle.readability_score}%</span>
                 </div>
 
-                <div className="flex space-x-2">
-                  <Button variant="outline" size="sm">
-                    Edit Article
-                  </Button>
-                  <Button size="sm" onClick={publishToWordPress}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Publish to WordPress
+                <div>
+                  <Button variant="outline" size="sm" onClick={handleEditArticle}>
+                    Edit & Open Full Article
                   </Button>
                 </div>
               </div>

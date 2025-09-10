@@ -1,5 +1,5 @@
 /**
- * Test script for API endpoints and WordPress integration
+ * Test script for core API endpoints (WordPress integration removed)
  * Run with: node --experimental-modules test_api.mjs
  */
 
@@ -57,9 +57,7 @@ const request = async (endpoint, options = {}) => {
 const blogApi = {
   getProducts: () => request('/blog/products'),
   getArticles: () => request('/blog/articles'),
-  getWordPressCategories: () => request('/blog/wordpress/categories'),
-  getWordPressTags: () => request('/blog/wordpress/tags'),
-  getWordPressSettings: () => request('/blog/wordpress/settings'),
+  // WordPress endpoints removed
 };
 
 const userApi = {
@@ -99,35 +97,7 @@ async function runTests() {
       console.log(`  ❌ Error: ${error.message}`);
     }
 
-    // Test WordPress integration
-    console.log('\n🔌 Testing WordPress Integration:');
-    
-    // Get WordPress categories
-    console.log('\n- Testing getWordPressCategories()');
-    try {
-      const categoriesData = await blogApi.getWordPressCategories();
-      console.log(`  ✅ Success! Retrieved ${categoriesData.categories?.length || 0} WordPress categories`);
-    } catch (error) {
-      console.log(`  ❌ Error: ${error.message}`);
-    }
-
-    // Get WordPress tags
-    console.log('\n- Testing getWordPressTags()');
-    try {
-      const tagsData = await blogApi.getWordPressTags();
-      console.log(`  ✅ Success! Retrieved ${tagsData.tags?.length || 0} WordPress tags`);
-    } catch (error) {
-      console.log(`  ❌ Error: ${error.message}`);
-    }
-
-    // Get WordPress settings
-    console.log('\n- Testing getWordPressSettings()');
-    try {
-      const settingsData = await blogApi.getWordPressSettings();
-      console.log(`  ✅ Success! Retrieved WordPress settings`);
-    } catch (error) {
-      console.log(`  ❌ Error: ${error.message}`);
-    }
+  // WordPress integration tests removed
 
     // Test user API endpoints
     console.log('\n👤 Testing User API endpoints:');

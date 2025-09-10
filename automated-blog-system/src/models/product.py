@@ -64,7 +64,6 @@ class Article(db.Model):
     status = db.Column(db.String(20), default='draft')  # draft, published, archived
     product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
     niche_id = db.Column(db.Integer, db.ForeignKey('niches.id'), nullable=True)
-    wordpress_post_id = db.Column(db.Integer)
     seo_score = db.Column(db.Float, default=0.0)
     readability_score = db.Column(db.Float, default=0.0)
     word_count = db.Column(db.Integer, default=0)
@@ -87,7 +86,7 @@ class Article(db.Model):
             'product_name': self.product.name if self.product else None,
             'niche_id': self.niche_id,
             'niche_name': self.niche.name if self.niche else None,
-            'wordpress_post_id': self.wordpress_post_id,
+            # WordPress field removed in headless architecture
             'seo_score': self.seo_score,
             'readability_score': self.readability_score,
             'word_count': self.word_count,

@@ -231,7 +231,6 @@ def get_blog_instances():
             {
                 'id': 1,
                 'name': 'Tech Reviews Blog',
-                'wordpress_url': 'https://techreviews.example.com',
                 'niche_id': 1,
                 'niche_name': 'Technology',
                 'assigned_agents': ['market_analytics', 'content_strategy'],
@@ -246,7 +245,6 @@ def get_blog_instances():
             {
                 'id': 2,
                 'name': 'Home & Garden Blog',
-                'wordpress_url': 'https://homeandgarden.example.com',
                 'niche_id': 2,
                 'niche_name': 'Home & Garden',
                 'assigned_agents': ['market_analytics'],
@@ -275,8 +273,8 @@ def create_blog_instance():
     """Create a new blog instance"""
     try:
         data = request.get_json()
-        
-        required_fields = ['name', 'wordpress_url', 'niche_id']
+
+        required_fields = ['name', 'niche_id']
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'{field} is required'}), 400
@@ -286,8 +284,6 @@ def create_blog_instance():
             try:
                 blog_instance = BlogInstance(
                     name=data['name'],
-                    wordpress_url=data['wordpress_url'],
-                    wordpress_username=data.get('wordpress_username'),
                     niche_id=data['niche_id'],
                     assigned_agents=data.get('assigned_agents', []),
                     status='active',
@@ -308,8 +304,6 @@ def create_blog_instance():
         blog_instance = {
             'id': 999,  # Mock ID
             'name': data['name'],
-            'wordpress_url': data['wordpress_url'],
-            'wordpress_username': data.get('wordpress_username'),
             'niche_id': data['niche_id'],
             'assigned_agents': data.get('assigned_agents', []),
             'status': 'active',
@@ -589,7 +583,7 @@ def get_system_health():
                     'orchestrator': 'active',
                     'market_analytics': 'idle',
                     'content_strategy': 'not_started',
-                    'wordpress_manager': 'not_started'
+                    # WordPress manager removed
                 },
                 'scrapers': {
                     'amazon_scraper': 'idle',

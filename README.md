@@ -1,8 +1,8 @@
-# Automated Blog Platform
+# Automated Blog Platform (Headless GPT-5 Marketing Stack Pivot)
 
 ## Project Overview
 
-The Automated Blog Platform is an advanced system designed to generate, optimize, and manage SEO-focused affiliate blogs with minimal human intervention. The platform leverages a multi-agent architecture to automate content creation, WordPress site management, market research, and monetization strategies for high-ticket affiliate products.
+The Automated Blog Platform is now a headless, multi-agent GPT-5 Marketing Stack that generates, optimizes, and manages SEO-focused affiliate content with minimal human intervention. The original WordPress coupling has been fully removed—content is produced and optimized in a headless layer ready for downstream publishing (static sites, CMS adapters, API syndication) to be added later.
 
 ## Core System Objectives
 
@@ -34,7 +34,7 @@ The React-based frontend provides a dashboard interface for monitoring and contr
 - **Article Management**: CRUD operations for blog articles
 - **Product Management**: Management interface for affiliate products
 - **Niche Management**: Configuration for different blog niches
-- **WordPress Integration**: Direct control of WordPress blogs
+- **(Removed) WordPress Integration**: Replaced by a headless content pipeline
 
 ### Multi-Agent System (In Development)
 
@@ -43,9 +43,9 @@ The core of the system's intelligence is its multi-agent architecture:
 - **Orchestrator Agent**: Central coordinator managing all blog instances
 - **Market Analytics Agent**: Researches trending products and market opportunities
 - **Content Strategy Agent**: Plans and optimizes content strategies
-- **WordPress Manager Agent**: Controls WordPress site configuration and optimization
 - **Monetization Agent**: Optimizes affiliate strategies and revenue
 - **Performance Analytics Agent**: Monitors KPIs and detects growth opportunities
+- (Planned) Publisher Adapter Framework: Generic publishing abstraction replacing the deprecated WordPress Manager role
 
 ### Web Scraping Infrastructure
 
@@ -56,14 +56,14 @@ A scalable web scraping system will gather market data from:
 - Social media platforms for trend detection
 - Competitor blogs and affiliate networks
 
-### WordPress Integration
+### Headless Content Layer
 
-The system features comprehensive WordPress automation:
+The prior WordPress-specific automation layer has been deprecated. The system now produces structured, optimization-ready article objects (title, summary, keywords, semantic entities, monetization context) that can be:
 
-- **REST API Integration**: Full control of WordPress sites via API
-- **Plugin Management**: Automatic configuration of SEO and affiliate plugins
-- **Theme Optimization**: Mobile-responsive design and page speed optimization
-- **Content Publishing**: Automated posting with proper formatting and metadata
+- Served via API to any downstream renderer
+- Transformed into static site output (Next.js/SvelteKit/JAMStack adapter TBD)
+- Enriched by forthcoming Knowledge Base + Semantic Retrieval modules
+- Routed to optional publisher adapters (future: WordPress adapter resurrected only as a plugin-style module)
 
 ### SEO Tools Implementation
 
@@ -81,20 +81,22 @@ The project has completed the following phases:
 1. ✅ Database setup and configuration
 2. ✅ Frontend-Backend integration
 3. ✅ API testing and verification
-4. ✅ WordPress integration for posting articles
-5. ✅ Multi-niche system implementation
+4. ✅ Multi-niche system implementation
+5. ❌ (Removed) WordPress integration (decoupled in headless pivot)
 
 Currently working on:
 
-- CRUD functionality verification and enhancement
-- Design and implementation of the agent-based architecture
+- Finalizing CRUD + headless article schema stability
+- GPT-5 Marketing Stack knowledge base ingestion + retrieval augmentation
+- Agent enrichment (content strategy + monetization logic)
 
 Upcoming major development focuses:
 
-1. Multi-agent architecture foundation
-2. Market analytics system with web scraping
-3. Enhanced WordPress automation
-4. Multi-blog management system
+1. Knowledge Base / Internal Marketing Ontology (topics, entities, intent clusters)
+2. Retrieval-Augmented Content Generation (RAG pipeline)
+3. Semantic Performance Feedback Loop (iterative optimization agent)
+4. Multi-channel Publishing Adapters (static exporter first)
+5. Market analytics system with web scraping
 
 ## File Structure
 
@@ -122,16 +124,19 @@ automated-blog-platform/
     └── scrapers/
 ```
 
-## Migration Strategy
+## Migration Strategy (Legacy → Headless GPT-5 Stack)
 
-The existing system is being evolved into a fully agent-based architecture:
+Phases executed / in progress:
 
-1. Existing services are being converted into agent tools
-2. The automation scheduler is being replaced by the Orchestrator Agent
-3. Database models are being extended to support agent states
-4. Implementation follows an incremental approach to maintain existing functionality
+1. Remove WordPress hard dependencies (DONE)
+2. Normalize article + product schema for headless delivery (DONE / refining)
+3. Introduce Knowledge Base (marketing ontology + entity graph) (IN PROGRESS)
+4. Add Retrieval Layer (vector + symbolic hybrid) (PLANNED)
+5. Refactor services → autonomous agents with tool interfaces (ONGOING)
+6. Instrument feedback metrics (CTR proxy, semantic coverage, topical authority) (PLANNED)
+7. Add publisher adapter abstraction (PLANNED)
 
-## Research Findings
+## Research Pillars (Guiding the GPT-5 Marketing Stack)
 
 ### Automated Content Generation
 
@@ -162,35 +167,117 @@ The existing system is being evolved into a fully agent-based architecture:
 - High-paying programs: Teachable (30% recurring), HubSpot, Semrush
 - Recurring commission programs are particularly valuable
 
-## Next Steps
+## Immediate Focus (September 2025)
 
-Priority actions:
-
-1. Complete Phase 6 CRUD verification tasks
-2. Create the base Agent class architecture
-3. Implement the Orchestrator Agent
-4. Set up message broker for agent communication
-5. Build the Market Analytics Agent with basic scraping
+1. Clean residual legacy references (DONE except kept stub: `wordpress_service.py` for safe imports)
+2. Add Knowledge Base loader + seed ingestion path
+3. Define RAG prompt + generation template structure
+4. Expose headless article JSON contract in docs
+5. Add migration note for removed WordPress columns
 
 ## Requirements
 
 ### Backend Dependencies
-- Python 3.9+
+- Python 3.11+
 - Flask
 - SQLAlchemy
-- OpenAI API
-- WordPress API
-- Redis (for agent communication)
+- OpenAI (GPT-4 / GPT-5 tier abstraction planned)
+- Redis (agent communication / event bus)
+- (Planned) Sentence embedding model (local or API) for retrieval
 
 ### Frontend Dependencies
 - Node.js
 - React
 - Material-UI
 
-### API Keys Required
+### API Keys / Secrets
 - OpenAI API Key
-- WordPress API Credentials
-- Google Ads API Credentials (for Keyword Planner)
 - (Future) Affiliate Network API Keys
+- (Future) Search / SERP sources (if using official APIs)
+
+Removed: WordPress credentials (no longer required)
+
+---
+
+## Legacy WordPress Deprecation & Database Note
+
+Former fields removed from models (if you persisted old DB snapshots you may need a manual migration):
+
+- Article.wordpress_post_id
+- BlogInstance.wordpress_url / wordpress_username / wordpress_app_password (and related settings)
+
+Recommended manual migration (SQLite example):
+
+```sql
+-- If legacy columns still exist, safely drop them (adjust table names to match actual schema)
+ALTER TABLE article RENAME TO article_legacy_backup; -- backup if uncertain
+-- Recreate article table without wordpress_post_id then copy data
+-- (For production you would use Alembic; not yet integrated.)
+```
+
+`wordpress_service.py` retained only as a stub raising RuntimeError to avoid breakage in any stale imports. Remove imports to finalize cleanup.
+
+---
+
+## Headless Article Contract (Draft)
+
+```json
+{
+    "id": 123,
+    "title": "String",
+    "slug": "kebab-case-string",
+    "summary": "Concise abstract",
+    "sections": [{"heading": "H2 text", "content": "Markdown or HTML-safe"}],
+    "keywords": ["primary", "secondary"],
+    "entities": ["BrandX", "ConceptY"],
+    "calls_to_action": [{"type": "affiliate", "target": "vendor-id", "anchor": "Buy Now"}],
+    "meta": {"read_time_minutes": 7, "semantic_density": 0.82},
+    "source_attribution": [{"url": "https://...", "confidence": 0.74}],
+    "created_at": "ISO8601",
+    "updated_at": "ISO8601"
+}
+```
+
+Planned additions: topical authority score, internal link suggestions, SERP gap insights.
+
+---
+
+## Knowledge Base Plan
+
+Data Layers:
+- Static Seed: curated marketing strategy docs (`/docs/*` + niche research)
+- Dynamic Harvest: agent-scraped market & competitor signals
+- Ontology: topics → subtopics → intents → entities → products
+- Embedding Store: vector index for retrieval augmenting generation
+
+Upcoming Implementation Files (planned):
+- `src/services/knowledge_base.py` (loader + retrieval facade)
+- `core/agents/content_strategy_agent.py` (RAG consumer)
+- `core/agents/monetization_agent.py` (contextual offer selection)
+
+---
+
+## Contributing (Internal)
+
+1. Keep changes atomic; remove residual legacy WordPress references when encountered.
+2. Prefer adding tests around new agent behaviors vs. retrofitting old services.
+3. Document new JSON contracts in README before large refactors.
+
+---
+
+## Roadmap Snapshot (High-Level)
+
+Q3/Q4 2025 Focus:
+- Knowledge ingestion + RAG
+- Content Strategy Agent
+- Performance feedback & iterative optimization loops
+- Static publishing adapter prototype
+
+Deprioritized / Removed:
+- Direct WordPress control (may return as optional adapter later)
+
+---
+
+End of README
 
 # automated_blog_platform

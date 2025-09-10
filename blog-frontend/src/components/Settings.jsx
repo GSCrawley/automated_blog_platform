@@ -16,11 +16,7 @@ const Settings = () => {
     user_name: '',
     user_email: '',
     
-    // WordPress Credentials
-    wordpress_url: '',
-    wordpress_username: '',
-    wordpress_password: '',
-    wordpress_api_key: '',
+  // (Removed WordPress credentials in headless architecture pivot)
     
     // Blog Configuration
     blog_target_url: '',
@@ -77,7 +73,7 @@ const Settings = () => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
           <p className="text-muted-foreground">
-            Configure your account, WordPress credentials, and affiliate program settings.
+            Configure your account and affiliate program settings.
           </p>
         </div>
         <Button onClick={handleSave} disabled={loading}>
@@ -101,10 +97,7 @@ const Settings = () => {
             <User className="h-4 w-4 mr-2" />
             Account
           </TabsTrigger>
-          <TabsTrigger value="wordpress">
-            <Globe className="h-4 w-4 mr-2" />
-            WordPress
-          </TabsTrigger>
+          {/* WordPress tab removed */}
           <TabsTrigger value="blog">
             <Globe className="h-4 w-4 mr-2" />
             Blog Config
@@ -151,55 +144,7 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="wordpress" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>WordPress Integration</CardTitle>
-              <CardDescription>
-                Configure your WordPress site credentials for automated publishing.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="wordpress_url">WordPress Site URL</Label>
-                <Input
-                  id="wordpress_url"
-                  placeholder="https://yourblog.com"
-                  value={settings.wordpress_url}
-                  onChange={(e) => handleInputChange('wordpress_url', e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="wordpress_username">WordPress Username</Label>
-                <Input
-                  id="wordpress_username"
-                  placeholder="Your WordPress username"
-                  value={settings.wordpress_username}
-                  onChange={(e) => handleInputChange('wordpress_username', e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="wordpress_password">WordPress Password</Label>
-                <Input
-                  id="wordpress_password"
-                  type="password"
-                  placeholder="Your WordPress password"
-                  value={settings.wordpress_password}
-                  onChange={(e) => handleInputChange('wordpress_password', e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="wordpress_api_key">WordPress API Key (Optional)</Label>
-                <Input
-                  id="wordpress_api_key"
-                  placeholder="WordPress REST API key"
-                  value={settings.wordpress_api_key}
-                  onChange={(e) => handleInputChange('wordpress_api_key', e.target.value)}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+  {/* WordPress credentials content removed */}
 
         <TabsContent value="blog" className="space-y-4">
           <Card>

@@ -27,18 +27,10 @@
 - [x] Test API endpoints
 - [x] Verify OpenAI integration
 
-## Phase 3.5: WordPress Integration 
-- [x] Implement WordPress service for posting articles
-- [x] Add tag handling for WordPress posts
-- [x] Test WordPress integration with test product
-- [x] Verify articles appear on WordPress site
-- [x] Add error handling and logging for WordPress integration
-- [x] Update Articles component to show WordPress post status
-- [x] Add functionality to view WordPress posts directly from the frontend
-- [x] Implement UI for updating WordPress posts
-- [x] Implement UI for deleting WordPress posts
-- [x] Ensure proper error handling for WordPress-related operations
-- [x] Test all WordPress integration features
+## Phase 3.5: (Deprecated) WordPress Integration 
+- (All previous tasks completed historically; integration now removed in headless pivot)
+- Stub `wordpress_service.py` retained only to avoid breaking stale imports
+- Future publishing will use adapter pattern (WordPress may return as optional plugin)
 
 ## Phase 4: Complete Frontend Integration 
 - [x] Connect frontend to backend
@@ -73,17 +65,17 @@
 - [ ] Implement comprehensive error handling for all CRUD operations
 - [ ] Add form validation for all create/edit operations
 
-## Phase 8: CRUD Operations Implementation
+## Phase 8: CRUD Operations Implementation (Headless)
 - [ ] **Products CRUD Operations**
   - [x] Implement Add Product form with validation
   - [x] Implement Edit Product functionality
   - [x] Implement Delete Product with confirmation
   - [ ] Test end-to-end product workflows
 - [ ] **Articles CRUD Operations**
-  - [ ] Implement Add Article form with WordPress integration
+  - [ ] Implement Add Article form (headless schema)
   - [ ] Implement Edit Article functionality
   - [ ] Implement Delete Article with confirmation
-  - [ ] Test WordPress publishing workflow
+  - [ ] Validate headless article JSON contract
 - [ ] **Niches CRUD Operations**
   - [ ] Implement Add Niche form with scoring
   - [ ] Implement Edit Niche functionality
@@ -126,11 +118,8 @@
   - [ ] Content calendar management
   - [ ] Performance-based content updates
   
-- [ ] **WordPress Manager Agent** [Next Phase]
-  - [ ] Full WordPress control (themes, plugins, settings)
-  - [ ] Site performance optimization
-  - [ ] Security monitoring
-  - [ ] Backup management
+- ~~WordPress Manager Agent (removed in headless pivot)~~
+  - (Replaced by future PublisherAdapter framework)
   
 - [ ] **Monetization Agent** [Next Phase]
   - [ ] Affiliate program management
@@ -219,29 +208,27 @@
 - [ ] Cross-reference with scraped data
 - [ ] Build trend visualization dashboard
 
-## Phase 9: Enhanced WordPress Automation
+## Phase 9: Knowledge Base & RAG Pipeline
 
-### 9.1 WordPress Control System
-- [ ] Implement WordPress CLI integration
-- [ ] Create plugin management system:
-  - [ ] Auto-install SEO plugins (Yoast/RankMath)
-  - [ ] Affiliate plugin management (ThirstyAffiliates, AAWP)
-  - [ ] Performance plugins (caching, CDN)
-  - [ ] Security plugins
-- [ ] Theme management:
-  - [ ] Theme selection algorithm based on niche
-  - [ ] Dynamic customization
-  - [ ] Mobile optimization
-  - [ ] Page speed optimization
+### 9.1 Knowledge Base Foundations
+- [ ] Create `src/services/knowledge_base.py` loader
+- [ ] Define ontology schema (topics → intents → entities → products)
+- [ ] Ingest seed docs from `/docs` and niche research
+- [ ] Build embedding index (select model + storage format)
+- [ ] Implement hybrid retrieval (keyword + vector)
 
-### 9.2 Content Publishing Pipeline
-- [ ] Automated featured image generation/selection
-- [ ] Dynamic internal linking system
-- [ ] Schema markup automation
-- [ ] XML sitemap management
-- [ ] Social media auto-posting
+### 9.2 RAG Content Generation
+- [ ] Draft prompt templates (outline, draft, optimize)
+- [ ] Add retrieval hook to content generator
+- [ ] Add semantic coverage scoring
+- [ ] Add hallucination guardrails (source citation requirement)
 
-## Phase 10: Multi-Blog Management System
+### 9.3 Feedback & Iteration Loop
+- [ ] Define metrics: topical coverage, semantic density, entity recall
+- [ ] Store generation metadata for later optimization
+- [ ] Implement improvement suggestion agent task
+
+## Phase 10: Multi-Blog Management System (Headless)
 
 ### 10.1 Blog Instance Management
 - [ ] Blog instance registry
@@ -304,7 +291,7 @@
 - [ ] Knowledge base updates
 - [ ] Cross-blog learning
 
-## Phase 13: SEO Tools Integration
+## Phase 13: SEO Tools Integration (Headless Oriented)
 
 ### 13.1 Free SEO Tools Implementation
 - [ ] Google Keyword Planner Integration
@@ -388,16 +375,30 @@
 - [ ] Database migration strategy
 - [ ] Backup and disaster recovery
 
-## Implementation Priority Order:
-1. Complete Phase 6 (CRUD Functionality Verification)
-2. Focus on Phase 7 (Multi-Agent Architecture Foundation)
-3. Parallel development of Phase 8.1 (Scraping) and Phase 9.1 (WordPress Control)
-4. Complete Phase 10 (Multi-Blog) before Phase 11 (Notifications)
-5. Phases 12-14 can be developed incrementally
-6. Phase 15 only when ready for SaaS
-7. Phases 16-17 throughout development
+## Implementation Priority Order (Revised Headless Roadmap):
+1. Finalize Phase 8 headless CRUD (Products, Articles, Niches)
+2. Phase 9 Knowledge Base + Retrieval Layer
+3. Phase 7 remaining agents (Content Strategy, Monetization, Performance) in parallel with KB
+4. Phase 10 Multi-Blog abstraction (after KB baseline)
+5. Phase 13 SEO tooling (feeds KB + optimization loops)
+6. Phase 12 Performance optimization / feedback instrumentation
+7. Later: SaaS (Phase 15) + Deployment hardening (Phases 16-17)
+
+## Migration Note (Legacy WordPress Columns)
+
+If a persistent DB still contains WordPress columns:
+
+- Article.wordpress_post_id
+- BlogInstance.wordpress_* fields
+
+Plan: introduce Alembic migrations later; for now manual adjustment or fresh DB recommended.
 
 ## Next Immediate Steps:
+1. (Task 2) Add Knowledge Base loader + ingestion pipeline
+2. (Task 3) Update README (DONE) & finalize headless article contract draft (IN README)
+3. (Task 1 - queued) Optionally remove `wordpress_service.py` stub after confirming no imports
+4. (Task 4 - queued) Scaffold `src/services/knowledge_base.py` + tests
+5. Add retrieval-enhanced generation path in content generator
 1. Complete Phase 6 CRUD verification tasks
 2. Create the base Agent class architecture
 3. Implement the Orchestrator Agent
