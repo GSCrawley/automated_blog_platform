@@ -1,0 +1,374 @@
+﻿[
+  {
+    "n": {
+      "identity": 0,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "name": "Flask Backend",
+        "technology": "Python/Flask",
+        "type": "Backend",
+        "status": "active"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:0"
+    }
+  },
+  {
+    "n": {
+      "identity": 1,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "name": "React Frontend",
+        "technology": "React/Vite",
+        "type": "Frontend",
+        "status": "active"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:1"
+    }
+  },
+  {
+    "n": {
+      "identity": 2,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "name": "SQLite Database",
+        "technology": "SQLite",
+        "type": "Database",
+        "status": "active"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:2"
+    }
+  },
+  {
+    "n": {
+      "identity": 3,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "name": "Redis Message Broker",
+        "technology": "Redis",
+        "type": "MessageBroker",
+        "status": "active"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:3"
+    }
+  },
+  {
+    "n": {
+      "identity": 4,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "name": "WordPress Integration",
+        "technology": "WordPress REST API",
+        "type": "CMS",
+        "status": "active"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:4"
+    }
+  },
+  {
+    "n": {
+      "identity": 5,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "responsibilities": "Central coordination, blog instance management",
+        "name": "Orchestrator Agent",
+        "type": "CoreAgent",
+        "status": "active"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:5"
+    }
+  },
+  {
+    "n": {
+      "identity": 6,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "responsibilities": "Market research, trend analysis",
+        "name": "Market Analytics Agent",
+        "type": "CoreAgent",
+        "status": "active"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:6"
+    }
+  },
+  {
+    "n": {
+      "identity": 7,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "performance": "sub-2-second load times",
+        "name": "Next.js Frontend",
+        "technology": "Next.js 14+",
+        "type": "JAMstackFrontend",
+        "status": "planned"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:7"
+    }
+  },
+  {
+    "n": {
+      "identity": 8,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "name": "Strapi Headless CMS",
+        "technology": "Strapi 4.15+",
+        "type": "HeadlessCMS",
+        "status": "planned"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:8"
+    }
+  },
+  {
+    "n": {
+      "identity": 9,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "name": "Vercel Deployment",
+        "technology": "Vercel/CDN",
+        "type": "Deployment",
+        "status": "planned"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:9"
+    }
+  },
+  {
+    "n": {
+      "identity": 10,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "name": "PostgreSQL Database",
+        "technology": "PostgreSQL",
+        "type": "Database",
+        "status": "planned"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:10"
+    }
+  },
+  {
+    "n": {
+      "identity": 11,
+      "labels": [
+        "AgentTeam"
+      ],
+      "properties": {
+        "members": 3,
+        "name": "Content Strategy Team",
+        "focus": "AI SEO, psychographic targeting, content generation"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:11"
+    }
+  },
+  {
+    "n": {
+      "identity": 12,
+      "labels": [
+        "AgentTeam"
+      ],
+      "properties": {
+        "members": 3,
+        "name": "Technical Infrastructure Team",
+        "focus": "Next.js integration, performance, analytics"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:12"
+    }
+  },
+  {
+    "n": {
+      "identity": 13,
+      "labels": [
+        "AgentTeam"
+      ],
+      "properties": {
+        "members": 4,
+        "name": "Multi-Platform Distribution Team",
+        "focus": "Platform optimization, content multiplication"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:13"
+    }
+  },
+  {
+    "n": {
+      "identity": 14,
+      "labels": [
+        "AgentTeam"
+      ],
+      "properties": {
+        "members": 3,
+        "name": "Interactive Editor Team",
+        "focus": "Conversational interface, content modification"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:14"
+    }
+  },
+  {
+    "n": {
+      "identity": 15,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "capabilities": "Conversational query optimization, E-E-A-T amplification",
+        "name": "AI SEO Optimization Agent",
+        "team": "Content Strategy",
+        "type": "SpecializedAgent"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:15"
+    }
+  },
+  {
+    "n": {
+      "identity": 16,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "capabilities": "Behavioral analysis, decision architecture",
+        "name": "Psychographic Targeting Agent",
+        "team": "Content Strategy",
+        "type": "SpecializedAgent"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:16"
+    }
+  },
+  {
+    "n": {
+      "identity": 17,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "capabilities": "AI-optimized content creation",
+        "name": "Content Generation Agent",
+        "team": "Content Strategy",
+        "type": "SpecializedAgent"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:17"
+    }
+  },
+  {
+    "n": {
+      "identity": 18,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "capabilities": "Static generation, Strapi integration",
+        "name": "Next.js Integration Agent",
+        "team": "Technical Infrastructure",
+        "type": "SpecializedAgent"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:18"
+    }
+  },
+  {
+    "n": {
+      "identity": 19,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "capabilities": "Core Web Vitals optimization",
+        "name": "Performance Optimization Agent",
+        "team": "Technical Infrastructure",
+        "type": "SpecializedAgent"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:19"
+    }
+  },
+  {
+    "n": {
+      "identity": 20,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "capabilities": "Real-time contextual metrics",
+        "name": "Analytics Implementation Agent",
+        "team": "Technical Infrastructure",
+        "type": "SpecializedAgent"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:20"
+    }
+  },
+  {
+    "n": {
+      "identity": 21,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "capabilities": "TikTok, Instagram, YouTube optimization",
+        "name": "Platform Optimization Agent",
+        "team": "Multi-Platform",
+        "type": "SpecializedAgent"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:21"
+    }
+  },
+  {
+    "n": {
+      "identity": 22,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "capabilities": "Multi-format content adaptation",
+        "name": "Content Multiplication Agent",
+        "team": "Multi-Platform",
+        "type": "SpecializedAgent"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:22"
+    }
+  },
+  {
+    "n": {
+      "identity": 23,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "capabilities": "Engagement strategies, community management",
+        "name": "Community Building Agent",
+        "team": "Multi-Platform",
+        "type": "SpecializedAgent"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:23"
+    }
+  },
+  {
+    "n": {
+      "identity": 24,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "capabilities": "Natural language content editing",
+        "name": "Conversational Interface Agent",
+        "team": "Interactive Editor",
+        "type": "SpecializedAgent"
+      },
+      "elementId": "4:46d5cd8b-e602-4c20-99c5-feac7efa4471:24"
+    }
+  }
+]

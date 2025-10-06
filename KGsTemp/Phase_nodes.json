@@ -1,0 +1,337 @@
+﻿[
+  {
+    "n": {
+      "identity": 164,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Phase 9 KB & RAG",
+        "priority": "critical",
+        "status": "in-progress"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:164"
+    }
+  },
+  {
+    "n": {
+      "identity": 165,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Agent Expansion",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:165"
+    }
+  },
+  {
+    "n": {
+      "identity": 166,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Hybrid Retrieval",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:166"
+    }
+  },
+  {
+    "n": {
+      "identity": 167,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Rulebook Validation Hooks",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:167"
+    }
+  },
+  {
+    "n": {
+      "identity": 168,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Distribution Framework",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:168"
+    }
+  },
+  {
+    "n": {
+      "identity": 169,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Monetization Optimization",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:169"
+    }
+  },
+  {
+    "n": {
+      "identity": 170,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Performance Analytics",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:170"
+    }
+  },
+  {
+    "n": {
+      "identity": 171,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Full Integration",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:171"
+    }
+  },
+  {
+    "n": {
+      "identity": 172,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Scale & Hardening",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:172"
+    }
+  },
+  {
+    "n": {
+      "identity": 318,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Phase 9 KB & RAG",
+        "priority": "critical",
+        "status": "in-progress"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:318"
+    }
+  },
+  {
+    "n": {
+      "identity": 319,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Agent Expansion",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:319"
+    }
+  },
+  {
+    "n": {
+      "identity": 320,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Hybrid Retrieval",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:320"
+    }
+  },
+  {
+    "n": {
+      "identity": 321,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Rulebook Validation Hooks",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:321"
+    }
+  },
+  {
+    "n": {
+      "identity": 322,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Distribution Framework",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:322"
+    }
+  },
+  {
+    "n": {
+      "identity": 323,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Monetization Optimization",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:323"
+    }
+  },
+  {
+    "n": {
+      "identity": 324,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Performance Analytics",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:324"
+    }
+  },
+  {
+    "n": {
+      "identity": 325,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Full Integration",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:325"
+    }
+  },
+  {
+    "n": {
+      "identity": 326,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "name": "Scale & Hardening",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:326"
+    }
+  },
+  {
+    "n": {
+      "identity": 394,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "scope": "projected_final",
+        "name": "Phase 9 KB & RAG",
+        "priority": "critical",
+        "status": "in-progress"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:394"
+    }
+  },
+  {
+    "n": {
+      "identity": 395,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "scope": "projected_final",
+        "name": "Agent Expansion",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:395"
+    }
+  },
+  {
+    "n": {
+      "identity": 396,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "scope": "projected_final",
+        "name": "Hybrid Retrieval",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:396"
+    }
+  },
+  {
+    "n": {
+      "identity": 397,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "scope": "projected_final",
+        "name": "Rulebook Validation Hooks",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:397"
+    }
+  },
+  {
+    "n": {
+      "identity": 398,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "scope": "projected_final",
+        "name": "Distribution Framework",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:398"
+    }
+  },
+  {
+    "n": {
+      "identity": 399,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "scope": "projected_final",
+        "name": "Monetization Optimization",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:399"
+    }
+  },
+  {
+    "n": {
+      "identity": 400,
+      "labels": [
+        "Phase"
+      ],
+      "properties": {
+        "scope": "projected_final",
+        "name": "Performance Analytics",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:400"
+    }
+  }
+]

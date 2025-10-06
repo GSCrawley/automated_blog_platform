@@ -1,0 +1,358 @@
+﻿[
+  {
+    "n": {
+      "identity": 0,
+      "labels": [
+        "Meta"
+      ],
+      "properties": {
+        "generated": "2025-09-10",
+        "name": "ArchitectureVersion",
+        "description": "Projected end-state after Phase 9–13 completion",
+        "version": "v1.0-final-projection"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:0"
+    }
+  },
+  {
+    "n": {
+      "identity": 1,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "delivery": "Static+ISR",
+        "name": "Next.js Frontend",
+        "technology": "Next.js 14+",
+        "type": "Frontend",
+        "status": "target"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:1"
+    }
+  },
+  {
+    "n": {
+      "identity": 2,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "name": "Strapi CMS",
+        "technology": "Strapi 4.x",
+        "type": "HeadlessCMS",
+        "status": "target"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:2"
+    }
+  },
+  {
+    "n": {
+      "identity": 3,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "name": "Vercel Edge",
+        "technology": "Vercel/CDN",
+        "type": "Deployment",
+        "status": "target"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:3"
+    }
+  },
+  {
+    "n": {
+      "identity": 4,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "name": "PostgreSQL Database",
+        "technology": "PostgreSQL 15+",
+        "type": "Database",
+        "status": "target"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:4"
+    }
+  },
+  {
+    "n": {
+      "identity": 5,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "name": "Redis Message Broker",
+        "technology": "Redis",
+        "type": "MessageBroker",
+        "status": "active"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:5"
+    }
+  },
+  {
+    "n": {
+      "identity": 6,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "name": "Flask API Gateway",
+        "technology": "Python/Flask",
+        "type": "BackendAPI",
+        "status": "transitional"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:6"
+    }
+  },
+  {
+    "n": {
+      "identity": 7,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "name": "Knowledge Base Service",
+        "technology": "Python",
+        "type": "Service",
+        "status": "evolving"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:7"
+    }
+  },
+  {
+    "n": {
+      "identity": 8,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "name": "Embedding Service",
+        "technology": "Local/External Embeddings",
+        "type": "MLService",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:8"
+    }
+  },
+  {
+    "n": {
+      "identity": 9,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "name": "RAG Pipeline",
+        "technology": "Hybrid Retrieval",
+        "type": "Service",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:9"
+    }
+  },
+  {
+    "n": {
+      "identity": 10,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "name": "Ontology Store",
+        "storage": "JSON→SQLite",
+        "type": "KnowledgeStore",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:10"
+    }
+  },
+  {
+    "n": {
+      "identity": 11,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "name": "Analytics Stream Processor",
+        "technology": "Event Processing",
+        "type": "Analytics",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:11"
+    }
+  },
+  {
+    "n": {
+      "identity": 12,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "purpose": "Multi-channel publishing",
+        "name": "Publisher Adapter Framework",
+        "type": "Abstraction",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:12"
+    }
+  },
+  {
+    "n": {
+      "identity": 13,
+      "labels": [
+        "Component"
+      ],
+      "properties": {
+        "name": "Edge Cache Layer",
+        "technology": "CDN/Edge Functions",
+        "type": "Edge",
+        "status": "planned"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:13"
+    }
+  },
+  {
+    "n": {
+      "identity": 14,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "role": "Coordinator",
+        "name": "Orchestrator Agent",
+        "status": "target"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:14"
+    }
+  },
+  {
+    "n": {
+      "identity": 15,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "role": "Signal Intake",
+        "name": "Market Analytics Agent",
+        "status": "target"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:15"
+    }
+  },
+  {
+    "n": {
+      "identity": 16,
+      "labels": [
+        "AgentTeam"
+      ],
+      "properties": {
+        "name": "Content Strategy Team",
+        "focus": "Query Coverage + Psychographics"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:16"
+    }
+  },
+  {
+    "n": {
+      "identity": 17,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "role": "Semantic & Conversational SEO",
+        "name": "AI SEO Optimization Agent"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:17"
+    }
+  },
+  {
+    "n": {
+      "identity": 18,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "role": "Persona & Motivation Mapping",
+        "name": "Psychographic Targeting Agent"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:18"
+    }
+  },
+  {
+    "n": {
+      "identity": 19,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "role": "Draft & Optimization",
+        "name": "Content Generation Agent"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:19"
+    }
+  },
+  {
+    "n": {
+      "identity": 20,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "role": "Offer Mapping & Revenue Optimization",
+        "name": "Monetization Agent"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:20"
+    }
+  },
+  {
+    "n": {
+      "identity": 21,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "role": "Coverage & Anomaly Detection",
+        "name": "Performance Analytics Agent"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:21"
+    }
+  },
+  {
+    "n": {
+      "identity": 22,
+      "labels": [
+        "AgentTeam"
+      ],
+      "properties": {
+        "name": "Platform Distribution Team",
+        "focus": "Adaptation & Syndication"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:22"
+    }
+  },
+  {
+    "n": {
+      "identity": 23,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "role": "Atomization & Derivatives",
+        "name": "Content Multiplication Agent"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:23"
+    }
+  },
+  {
+    "n": {
+      "identity": 24,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "role": "Channel Native Optimization",
+        "name": "Platform Optimization Agent"
+      },
+      "elementId": "4:239b4d68-682a-4dc4-ab2b-bed1508a20ce:24"
+    }
+  }
+]

@@ -398,6 +398,19 @@ If a persistent DB still contains WordPress columns:
 
 Plan: introduce Alembic migrations later; for now manual adjustment or fresh DB recommended.
 
+## Documentation & Developer Experience ✅ COMPLETED
+- [x] **WARP.md Creation**: Created comprehensive WARP.md file with:
+  - [x] Essential development commands (setup, build, test)
+  - [x] System architecture overview (multi-agent system, headless pipeline)
+  - [x] Project structure patterns (backend, frontend, agent system)
+  - [x] Agent system development guidelines
+  - [x] API endpoints documentation
+  - [x] Configuration requirements and environment setup
+  - [x] Knowledge base integration patterns
+  - [x] Testing strategies (agent system, API, frontend)
+  - [x] Troubleshooting section
+- [x] **README.md Update**: Added reference to WARP.md for development quick start
+
 ## Next Immediate Steps:
 1. (Task 2) Add Knowledge Base loader + ingestion pipeline
 2. (Task 3) Update README (DONE) & finalize headless article contract draft (IN README)

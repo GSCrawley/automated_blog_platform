@@ -257,11 +257,16 @@ Upcoming Implementation Files (planned):
 
 ---
 
+## Development Quick Start
+
+**For WARP Terminal users:** See `WARP.md` for comprehensive development commands and architecture guidance tailored for WARP's AI capabilities.
+
 ## Contributing (Internal)
 
 1. Keep changes atomic; remove residual legacy WordPress references when encountered.
 2. Prefer adding tests around new agent behaviors vs. retrofitting old services.
 3. Document new JSON contracts in README before large refactors.
+4. Refer to `WARP.md` for development workflow and testing strategies.
 
 ---
 

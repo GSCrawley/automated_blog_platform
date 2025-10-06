@@ -1,0 +1,330 @@
+﻿[
+  {
+    "n": {
+      "identity": 0,
+      "labels": [
+        "System"
+      ],
+      "properties": {
+        "name": "AutomatedBlogPlatform",
+        "version": "1.0"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:0"
+    }
+  },
+  {
+    "n": {
+      "identity": 1,
+      "labels": [
+        "Infrastructure"
+      ],
+      "properties": {
+        "name": "CoreInfrastructure"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:1"
+    }
+  },
+  {
+    "n": {
+      "identity": 2,
+      "labels": [
+        "MessageBroker"
+      ],
+      "properties": {
+        "name": "Redis",
+        "type": "PubSub"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:2"
+    }
+  },
+  {
+    "n": {
+      "identity": 3,
+      "labels": [
+        "TaskQueue"
+      ],
+      "properties": {
+        "name": "Celery",
+        "type": "AsyncTasks"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:3"
+    }
+  },
+  {
+    "n": {
+      "identity": 4,
+      "labels": [
+        "EventBus"
+      ],
+      "properties": {
+        "name": "EventBus",
+        "type": "EventDriven"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:4"
+    }
+  },
+  {
+    "n": {
+      "identity": 5,
+      "labels": [
+        "StateManager"
+      ],
+      "properties": {
+        "name": "StateManager",
+        "type": "SharedState"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:5"
+    }
+  },
+  {
+    "n": {
+      "identity": 6,
+      "labels": [
+        "AgentSystem"
+      ],
+      "properties": {
+        "name": "MultiAgentSystem"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:6"
+    }
+  },
+  {
+    "n": {
+      "identity": 7,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "name": "OrchestratorAgent",
+        "autonomous": false,
+        "type": "Coordinator"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:7"
+    }
+  },
+  {
+    "n": {
+      "identity": 8,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "name": "MarketAnalyticsAgent",
+        "autonomous": true,
+        "type": "Analytics"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:8"
+    }
+  },
+  {
+    "n": {
+      "identity": 9,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "name": "ContentStrategyAgent",
+        "autonomous": true,
+        "type": "Content"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:9"
+    }
+  },
+  {
+    "n": {
+      "identity": 10,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "name": "WordPressManagerAgent",
+        "autonomous": true,
+        "type": "WordPress"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:10"
+    }
+  },
+  {
+    "n": {
+      "identity": 11,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "name": "MonetizationAgent",
+        "autonomous": true,
+        "type": "Revenue"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:11"
+    }
+  },
+  {
+    "n": {
+      "identity": 12,
+      "labels": [
+        "Agent"
+      ],
+      "properties": {
+        "name": "PerformanceAnalyticsAgent",
+        "autonomous": true,
+        "type": "Monitoring"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:12"
+    }
+  },
+  {
+    "n": {
+      "identity": 13,
+      "labels": [
+        "BlogManager"
+      ],
+      "properties": {
+        "name": "BlogInstanceManager"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:13"
+    }
+  },
+  {
+    "n": {
+      "identity": 14,
+      "labels": [
+        "BlogInstance"
+      ],
+      "properties": {
+        "name": "Blog1",
+        "niche": "Tech",
+        "status": "Active"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:14"
+    }
+  },
+  {
+    "n": {
+      "identity": 15,
+      "labels": [
+        "BlogInstance"
+      ],
+      "properties": {
+        "name": "Blog2",
+        "niche": "Health",
+        "status": "Active"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:15"
+    }
+  },
+  {
+    "n": {
+      "identity": 16,
+      "labels": [
+        "DataSources"
+      ],
+      "properties": {
+        "name": "ExternalDataSources"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:16"
+    }
+  },
+  {
+    "n": {
+      "identity": 17,
+      "labels": [
+        "Scraper"
+      ],
+      "properties": {
+        "name": "AmazonScraper",
+        "type": "Product"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:17"
+    }
+  },
+  {
+    "n": {
+      "identity": 18,
+      "labels": [
+        "Scraper"
+      ],
+      "properties": {
+        "name": "GoogleShoppingScraper",
+        "type": "Product"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:18"
+    }
+  },
+  {
+    "n": {
+      "identity": 19,
+      "labels": [
+        "Scraper"
+      ],
+      "properties": {
+        "name": "SocialMediaScraper",
+        "type": "Trends"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:19"
+    }
+  },
+  {
+    "n": {
+      "identity": 20,
+      "labels": [
+        "Scraper"
+      ],
+      "properties": {
+        "name": "CompetitorScraper",
+        "type": "Competition"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:20"
+    }
+  },
+  {
+    "n": {
+      "identity": 21,
+      "labels": [
+        "API"
+      ],
+      "properties": {
+        "name": "GoogleTrendsAPI",
+        "type": "Trends"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:21"
+    }
+  },
+  {
+    "n": {
+      "identity": 22,
+      "labels": [
+        "Integration"
+      ],
+      "properties": {
+        "name": "WordPressIntegration"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:22"
+    }
+  },
+  {
+    "n": {
+      "identity": 23,
+      "labels": [
+        "API"
+      ],
+      "properties": {
+        "name": "WP_REST_API",
+        "type": "Content"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:23"
+    }
+  },
+  {
+    "n": {
+      "identity": 24,
+      "labels": [
+        "Tool"
+      ],
+      "properties": {
+        "name": "WP_CLI",
+        "type": "Management"
+      },
+      "elementId": "4:f2424c5a-ae17-4991-b048-36505fef6f19:24"
+    }
+  }
+]
