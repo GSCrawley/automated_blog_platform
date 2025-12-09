@@ -14,9 +14,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def create_app():
-    app = Flask(__name__)
+    # Set static_folder to the built React app directory
+    app = Flask(__name__, static_folder='../static', static_url_path='/')
     app.config.from_object(Config)
-    Config.init_app(app)  # This will print the database path
+    Config.init_app(app)
     
     # Initialize database
     from src.models.user import db
@@ -65,9 +66,25 @@ if __name__ == '__main__':
     
     # Create tables
     with app.app_context():
-        from src.models.user import db
         db.create_all()
         logger.info("Database initialized successfully")
-    
-    app.run(host='0.0.0.0', port=5000, debug=True)
 
+    # Route to serve the main index.html for the React app
+    @app.route('/')
+    def serve_index():
+        return send_from_directory(app.static_folder, 'index.html')
+
+    # Route to handle all other routes for React routing (e.g., /niches, /products)
+    @app.errorhandler(404)
+    def not_found(e):
+        # Check if the request is for an API endpoint
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'Not Found', 'success': False}), 404
+        # Otherwise, serve the index.html for React routing
+        return send_from_directory(app.static_folder, 'index.html')
+
+    return app
+
+if __name__ == '__main__':
+    app = create_app()
+    app.run(host='0.0.0.0', port=5000, debug=False)
