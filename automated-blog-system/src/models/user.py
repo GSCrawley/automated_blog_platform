@@ -1,24 +1,21 @@
-from flask import Blueprint, request, jsonify
-import logging
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 
-logger = logging.getLogger(__name__)
+# Initialize SQLAlchemy instance outside of create_app to be imported by models
+db = SQLAlchemy()
 
-user_bp = Blueprint('user', __name__)
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    niches = db.relationship('Niche', backref='user', lazy=True)
 
-@user_bp.route('/health', methods=['GET'])
-def health_check():
-    """Health check endpoint."""
-    return jsonify({'success': True, 'message': 'API is healthy'})
+    def __repr__(self):
+        return f'<User {self.username}>'
 
-@user_bp.route('/info', methods=['GET'])
-def get_info():
-    """Get API information."""
-    return jsonify({
-        'success': True,
-        'info': {
-            'name': 'Automated Blog System API',
-            'version': '1.0.0',
-            'description': 'Multi-niche automated blog content generation system'
-        }
-    })
-
+# The user routes blueprint should be in src/routes/user.py, not here.
+# The previous content was incorrect and has been replaced with the model definition.

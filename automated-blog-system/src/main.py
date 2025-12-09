@@ -5,7 +5,7 @@ import logging
 # Add the parent directory to the Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 from src.config import Config
 
@@ -44,6 +44,15 @@ def create_app():
     except Exception as e:
         print(f"❌ Error registering blog blueprint: {e}")
     
+    # Serve React Frontend
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def serve(path):
+        if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+            return send_from_directory(app.static_folder, path)
+        else:
+            return send_from_directory(app.static_folder, 'index.html')
+
     # Print all registered routes
     print("\n📋 Registered routes:")
     for rule in app.url_map.iter_rules():
