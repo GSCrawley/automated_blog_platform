@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { blogApi } from '../services/api';
 import { Plus, Target, Edit, Trash2, TrendingUp, Users, DollarSign } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Button } from './ui/button';
@@ -31,7 +30,8 @@ const Niches = () => {
 
   const fetchNiches = async () => {
     try {
-      const data = await blogApi.getNiches();
+      const response = await fetch('http://localhost:5000/api/blog/niches');
+      const data = await response.json();
       if (data.success) {
         setNiches(data.niches);
       }
@@ -45,14 +45,21 @@ const Niches = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      let data;
+      const url = editingNiche 
+        ? `http://localhost:5000/api/blog/niches/${editingNiche.id}`
+        : 'http://localhost:5000/api/blog/niches';
       
-      if (editingNiche) {
-        data = await blogApi.updateNiche(editingNiche.id, formData);
-      } else {
-        data = await blogApi.createNiche(formData);
-      }
+      const method = editingNiche ? 'PUT' : 'POST';
       
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
       if (data.success) {
         fetchNiches();
         setIsDialogOpen(false);
@@ -84,7 +91,10 @@ const Niches = () => {
   const handleDelete = async (nicheId) => {
     if (window.confirm('Are you sure you want to delete this niche?')) {
       try {
-        const data = await blogApi.deleteNiche(nicheId);
+        const response = await fetch(`http://localhost:5000/api/blog/niches/${nicheId}`, {
+          method: 'DELETE',
+        });
+        const data = await response.json();
         if (data.success) {
           fetchNiches();
         }

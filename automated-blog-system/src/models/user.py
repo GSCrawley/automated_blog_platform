@@ -1,18 +1,24 @@
-from flask_sqlalchemy import SQLAlchemy
+from flask import Blueprint, request, jsonify
+import logging
 
-db = SQLAlchemy()
+logger = logging.getLogger(__name__)
 
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+user_bp = Blueprint('user', __name__)
 
-    def __repr__(self):
-        return f'<User {self.username}>'
+@user_bp.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint."""
+    return jsonify({'success': True, 'message': 'API is healthy'})
 
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'username': self.username,
-            'email': self.email
+@user_bp.route('/info', methods=['GET'])
+def get_info():
+    """Get API information."""
+    return jsonify({
+        'success': True,
+        'info': {
+            'name': 'Automated Blog System API',
+            'version': '1.0.0',
+            'description': 'Multi-niche automated blog content generation system'
         }
+    })
+
