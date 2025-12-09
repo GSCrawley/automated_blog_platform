@@ -5,7 +5,7 @@ import logging
 # Add the parent directory to the Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from flask import Flask, send_from_directory, request, jsonify
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 from src.config import Config
 
@@ -30,11 +30,39 @@ def create_app():
     from src.models.product import Product, Article
     from src.models.niche import Niche
     
-    # Register blueprints
-    from src.routes.user import user_bp
-    from src.routes.blog import blog_bp
-    app.register_blueprint(user_bp, url_prefix='/api/user')
-    app.register_blueprint(blog_bp, url_prefix='/api/blog')
+    # Register blueprints with debug prints
+    try:
+        from src.routes.user import user_bp
+        app.register_blueprint(user_bp, url_prefix='/api/user')
+        print("✅ User blueprint registered successfully")
+    except Exception as e:
+        print(f"❌ Error registering user blueprint: {e}")
+    
+    try:
+        from src.routes.blog import blog_bp
+        app.register_blueprint(blog_bp, url_prefix='/api/blog')
+        print("✅ Blog blueprint registered successfully")
+    except Exception as e:
+        print(f"❌ Error registering blog blueprint: {e}")
+    
+    # Serve React Frontend
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def serve(path):
+        if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+            return send_from_directory(app.static_folder, path)
+        else:
+            return send_from_directory(app.static_folder, 'index.html')
+
+    # Print all registered routes
+    print("\n📋 Registered routes:")
+    for rule in app.url_map.iter_rules():
+        print(f"  {rule.methods} {rule.rule}")
+    
+    return app
+
+if __name__ == '__main__':
+    app = create_app()
     
     # Create tables
     with app.app_context():
