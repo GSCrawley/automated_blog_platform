@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def create_app():
     # Set static_folder to the built React app directory
-    app = Flask(__name__, static_folder='../../blog-frontend/dist', static_url_path='/')
+    app = Flask(__name__, static_folder='../static', static_url_path='/')
     app.config.from_object(Config)
     Config.init_app(app)
     
