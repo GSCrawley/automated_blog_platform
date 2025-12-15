@@ -64,6 +64,9 @@ def create_app():
 if __name__ == '__main__':
     app = create_app()
     
+    # Import db from models
+    from src.models.user import db
+    
     # Create tables
     with app.app_context():
         db.create_all()
@@ -83,7 +86,7 @@ if __name__ == '__main__':
         # Otherwise, serve the index.html for React routing
         return send_from_directory(app.static_folder, 'index.html')
 
-    return app
+        return app
 
 if __name__ == '__main__':
     app = create_app()

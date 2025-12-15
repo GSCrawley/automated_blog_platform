@@ -141,14 +141,29 @@ const Niches = () => {
           <h1 className="text-3xl font-bold">Niche Management</h1>
           <p className="text-gray-600 mt-2">Manage your blog niches and target markets</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog 
+          open={isDialogOpen} 
+          onOpenChange={(open) => {
+            // Prevent closing on outside click - only allow programmatic close
+            if (open) {
+              setIsDialogOpen(true);
+            }
+          }}
+        >
           <DialogTrigger asChild>
-            <Button onClick={resetForm} className="bg-green-600 hover:bg-green-700">
+            <Button onClick={() => {
+              resetForm();
+              setIsDialogOpen(true);
+            }} className="bg-green-600 hover:bg-green-700">
               <Plus className="w-4 h-4 mr-2" />
               Add Niche
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent 
+            className="max-w-2xl max-h-[90vh] overflow-y-auto"
+            onPointerDownOutside={(e) => e.preventDefault()}
+            onInteractOutside={(e) => e.preventDefault()}
+          >
             <DialogHeader>
               <DialogTitle>
                 {editingNiche ? 'Edit Niche' : 'Create New Niche'}
@@ -260,7 +275,10 @@ const Niches = () => {
               </div>
 
               <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => {
+                  resetForm();
+                  setIsDialogOpen(false);
+                }}>
                   Cancel
                 </Button>
                 <Button type="submit" className="bg-green-600 hover:bg-green-700">
@@ -277,9 +295,19 @@ const Niches = () => {
           <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-600 mb-2">No niches found</h3>
           <p className="text-gray-500 mb-6">Get started by creating your first niche to organize your products and content.</p>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog 
+            open={isDialogOpen} 
+            onOpenChange={(open) => {
+              if (open) {
+                setIsDialogOpen(true);
+              }
+            }}
+          >
             <DialogTrigger asChild>
-              <Button onClick={resetForm} className="bg-green-600 hover:bg-green-700">
+              <Button onClick={() => {
+                resetForm();
+                setIsDialogOpen(true);
+              }} className="bg-green-600 hover:bg-green-700">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Your First Niche
               </Button>
