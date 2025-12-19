@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Target, Edit, Trash2, TrendingUp, Users, DollarSign } from 'lucide-react';
+import { Plus, Target, Edit, Trash2, TrendingUp, Users, DollarSign, Rocket, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -12,6 +12,10 @@ const Niches = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingNiche, setEditingNiche] = useState(null);
+  const [activatingId, setActivatingId] = useState(null);
+  const [activeNicheId, setActiveNicheId] = useState(null);
+  const [automationSummary, setAutomationSummary] = useState(null);
+  const [activationError, setActivationError] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -39,6 +43,33 @@ const Niches = () => {
       console.error('Error fetching niches:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const activateNiche = async (nicheId) => {
+    setActivatingId(nicheId);
+    setActivationError(null);
+    try {
+      const response = await fetch(`http://localhost:5000/api/agents/niches/${nicheId}/activate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+      });
+
+      const data = await response.json();
+      if (response.ok && data.status === 'success') {
+        setActiveNicheId(nicheId);
+        setAutomationSummary(data);
+      } else {
+        setActivationError(data.error || 'Failed to activate niche');
+      }
+    } catch (error) {
+      console.error('Error activating niche:', error);
+      setActivationError(error.message);
+    } finally {
+      setActivatingId(null);
     }
   };
 
@@ -290,6 +321,49 @@ const Niches = () => {
         </Dialog>
       </div>
 
+      {activationError && (
+        <div className="flex items-center space-x-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          <AlertTriangle className="w-5 h-5" />
+          <span>{activationError}</span>
+        </div>
+      )}
+
+      {automationSummary && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs uppercase text-gray-500">Active niche</p>
+              <div className="flex items-center space-x-2">
+                <Rocket className="w-5 h-5 text-blue-600" />
+                <h3 className="text-lg font-semibold">Niche #{automationSummary.niche_id}</h3>
+                <span className="flex items-center text-green-700 text-sm">
+                  <CheckCircle2 className="w-4 h-4 mr-1" />
+                  Automation running
+                </span>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">Agents: {automationSummary.assigned_agents.join(', ')}</p>
+              <p className="text-sm text-gray-700 mt-2">{automationSummary.profitability_insight?.summary}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500">Activated</p>
+              <p className="text-sm font-medium">{new Date(automationSummary.activated_at).toLocaleString()}</p>
+              <p className="text-xs text-gray-500 mt-2">Tasks seeded: {automationSummary.tasks_seeded?.length || 0}</p>
+            </div>
+          </div>
+
+          {automationSummary.tasks_seeded?.length > 0 && (
+            <div className="mt-3 grid md:grid-cols-2 gap-3">
+              {automationSummary.tasks_seeded.slice(0, 4).map((task) => (
+                <div key={task.id || task.task_id} className="border border-gray-100 rounded p-3 text-sm">
+                  <p className="font-medium capitalize">{task.task_type.replace('_', ' ')}</p>
+                  <p className="text-gray-600">Assigned to {task.assigned_agent}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {niches.length === 0 ? (
         <div className="text-center py-12">
           <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -384,6 +458,18 @@ const Niches = () => {
                 </div>
               </div>
 
+              <div className="mt-4 flex items-center justify-between">
+                <div className="text-xs text-gray-500">{activeNicheId === niche.id ? 'Currently active' : 'Ready to activate'}</div>
+                <Button
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700"
+                  disabled={activatingId === niche.id}
+                  onClick={() => activateNiche(niche.id)}
+                >
+                  {activatingId === niche.id ? 'Starting...' : 'Activate & Run Automation'}
+                </Button>
+              </div>
+
               {niche.target_keywords && niche.target_keywords.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   <p className="text-xs text-gray-500 mb-2">Target Keywords:</p>
@@ -410,4 +496,3 @@ const Niches = () => {
 };
 
 export default Niches;
-

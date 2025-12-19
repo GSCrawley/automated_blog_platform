@@ -42,6 +42,8 @@ class BlogInstance(db.Model):
     niche_id = Column(Integer, ForeignKey('niches.id'), nullable=False)
     assigned_agents = Column(JSON, default=[])  # List of agent names assigned to this blog
     status = Column(String(50), default='active')  # active, paused, error, maintenance
+    active = Column(Boolean, default=True)
+    selected_at = Column(DateTime, default=datetime.utcnow)
     performance_data = Column(JSON, default={})
     settings = Column(JSON, default={})  # Blog-specific settings / future CMS mapping
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -59,8 +61,10 @@ class BlogInstance(db.Model):
             'niche_name': self.niche.name if self.niche else None,
             'assigned_agents': self.assigned_agents,
             'status': self.status,
+            'active': self.active,
             'performance_data': self.performance_data,
             'settings': self.settings,
+            'selected_at': self.selected_at.isoformat() if self.selected_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }

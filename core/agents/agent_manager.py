@@ -7,6 +7,10 @@ from datetime import datetime
 from agents.base_agent import BaseAgent
 from agents.orchestrator_agent import OrchestratorAgent
 from agents.market_analytics_agent import MarketAnalyticsAgent
+from agents.product_scout_agent import ProductScoutAgent
+from agents.affiliate_ops_agent import AffiliateOpsAgent
+from agents.author_agent import AuthorAgent
+from agents.editor_agent import EditorAgent
 from infrastructure.message_broker import MessageBroker
 
 class AgentManager:
@@ -239,18 +243,29 @@ class AgentManager:
     def initialize_default_agents(self):
         """Initialize and register default agents"""
         self.logger.info("Initializing default agents...")
-        
+
         try:
             # Initialize Orchestrator Agent
             orchestrator = OrchestratorAgent(self.redis_host, self.redis_port)
             self.register_agent(orchestrator)
-            
+
             # Initialize Market Analytics Agent
             market_analytics = MarketAnalyticsAgent(self.redis_host, self.redis_port)
             self.register_agent(market_analytics)
-            
+
+            # Initialize specialized agents
+            product_scout = ProductScoutAgent(self.redis_host, self.redis_port)
+            affiliate_ops = AffiliateOpsAgent(self.redis_host, self.redis_port)
+            authoring = AuthorAgent(self.redis_host, self.redis_port)
+            editorial = EditorAgent(self.redis_host, self.redis_port)
+
+            self.register_agent(product_scout)
+            self.register_agent(affiliate_ops)
+            self.register_agent(authoring)
+            self.register_agent(editorial)
+
             self.logger.info("Default agents initialized successfully")
-            
+
         except Exception as e:
             self.logger.error(f"Failed to initialize default agents: {str(e)}")
     

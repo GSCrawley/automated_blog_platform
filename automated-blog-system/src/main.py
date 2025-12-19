@@ -5,7 +5,7 @@ import logging
 # Add the parent directory to the Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, request, jsonify
 from flask_cors import CORS
 from src.config import Config
 
@@ -29,6 +29,7 @@ def create_app():
     # Import models
     from src.models.product import Product, Article
     from src.models.niche import Niche
+    from src.models.agent_models import AgentState, BlogInstance, AgentTask, AgentDecision
     
     # Register blueprints with debug prints
     try:
@@ -44,6 +45,20 @@ def create_app():
         print("✅ Blog blueprint registered successfully")
     except Exception as e:
         print(f"❌ Error registering blog blueprint: {e}")
+
+    try:
+        from src.routes.agent_routes import agent_bp
+        app.register_blueprint(agent_bp, url_prefix='/api/agents')
+        print("✅ Agent blueprint registered successfully")
+    except Exception as e:
+        print(f"❌ Error registering agent blueprint: {e}")
+
+    try:
+        from src.routes.automation import automation_bp
+        app.register_blueprint(automation_bp, url_prefix='/api/automation')
+        print("✅ Automation blueprint registered successfully")
+    except Exception as e:
+        print(f"❌ Error registering automation blueprint: {e}")
     
     # Serve React Frontend
     @app.route('/', defaults={'path': ''})
@@ -58,6 +73,7 @@ def create_app():
     print("\n📋 Registered routes:")
     for rule in app.url_map.iter_rules():
         print(f"  {rule.methods} {rule.rule}")
+    
     
     return app
 
@@ -89,5 +105,12 @@ if __name__ == '__main__':
         return app
 
 if __name__ == '__main__':
-    app = create_app()
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    flask_app = create_app()
+
+    # Create tables
+    from src.models.user import db
+    with flask_app.app_context():
+        db.create_all()
+        logger.info("Database initialized successfully")
+
+    flask_app.run(host='0.0.0.0', port=5000, debug=False)
