@@ -21,19 +21,22 @@ pnpm install
 
 ### Development Workflow
 ```bash
-# Start backend Flask server (from automated-blog-system/)
+# 1. Start Redis FIRST (required for agent communication)
+redis-server
+# Or using Homebrew as a service:
+brew services start redis
+# Verify Redis is running:
+redis-cli ping  # Should respond: PONG
+
+# 2. Start backend Flask server (from automated-blog-system/)
 cd automated-blog-system/src
 python main.py
-# Server runs on http://localhost:5000
+# Backend runs on http://localhost:5000
 
-# Start frontend dev server (from blog-frontend/)
+# 3. Start frontend dev server (from blog-frontend/)
 cd blog-frontend
-npm run dev
-# Server runs on http://localhost:5173
-
-# Start Redis (required for agent communication)
-redis-server
-# Or using homebrew: brew services start redis
+pnpm dev  # Project uses pnpm (see package.json packageManager field)
+# Frontend runs on http://localhost:5173
 ```
 
 ### Testing Commands
@@ -68,17 +71,22 @@ npm run preview
 ### Multi-Agent System (Core Innovation)
 This project implements a **headless GPT-5 Marketing Stack** with autonomous agents:
 
+**Currently Operational** (2 agents running):
 - **Orchestrator Agent**: Central coordinator managing all blog instances and agent assignments
 - **Market Analytics Agent**: Researches trending products, competitive analysis, and market opportunities
+
+**Planned/In Development**:
 - **Content Strategy Agent**: Plans content based on trends, handles SEO optimization, manages content calendar
 - **Monetization Agent**: Manages affiliate programs, optimizes ad placement, tracks revenue
 - **Performance Analytics Agent**: Monitors KPIs, detects anomalies, identifies growth opportunities
 
 ### Agent Communication Layer
-- **Redis Pub/Sub**: Inter-agent messaging system
-- **Message Broker**: Event-driven architecture with approval queues
-- **Decision Framework**: Autonomous vs. approval-required action classification
-- **State Management**: Persistent agent state with performance tracking
+- **Redis Pub/Sub**: All inter-agent messaging uses Redis channels (`agents.global`, `agents.{agent_name}`)
+- **Message Broker** (`core/infrastructure/message_broker.py`): Handles pub/sub, task queues, agent coordination
+- **Event-Driven**: Agents communicate via typed messages (`task_assignment`, `status_request`, `coordination`)
+- **Decision Framework**: Autonomous vs. approval-required action classification (DecisionImpact: LOW/MEDIUM/HIGH)
+- **State Management**: Agent states persisted to database and Redis with 5-minute TTL for liveness detection
+- **Task Queues**: Priority-based task queues using Redis sorted sets
 
 ### Headless Content Pipeline
 The system generates structured, optimization-ready article objects that can be:
@@ -159,9 +167,12 @@ agent.broadcast_message({
 
 ### Creating New Agents
 1. Extend `BaseAgent` class in `core/agents/`
-2. Implement required methods: `execute_task()`, `get_capabilities()`
+2. Implement required abstract methods:
+   - `execute_task(task_data)`: Agent-specific task execution logic
+   - `get_capabilities()`: Return list of agent capabilities
 3. Register agent in `AgentManager.initialize_default_agents()`
 4. Add agent-specific routes in `src/routes/agent_routes.py`
+5. Create agent rulebook in `docs/agent_rulebooks/{agent_name}.md`
 
 ### Agent State Management
 ```python
@@ -174,6 +185,42 @@ agent.update_state({
 
 # Persist to database
 agent.persist_state()
+```
+
+### Message Broker Usage
+```python
+from core.infrastructure.message_broker import MessageBroker
+
+# Initialize message broker
+broker = MessageBroker(redis_host='localhost', redis_port=6379)
+
+# Subscribe to channel with handler function
+def handle_message(message_data):
+    print(f"Received: {message_data}")
+
+broker.subscribe_to_channel('agents.orchestrator', handle_message)
+broker.start_listening()  # Starts listening in background thread
+
+# Publish messages
+broker.publish_message('agents.market_analytics', {
+    'type': 'task_assignment',
+    'action': 'analyze_trends'
+})
+
+# Add tasks to priority queue (lower priority number = higher priority)
+broker.add_task_to_queue('market_research', {
+    'action': 'analyze_trends',
+    'niche': 'tech'
+}, priority=8)
+
+# Get tasks from queue (highest priority first)
+task = broker.get_task_from_queue('market_research')
+
+# Check queue size
+queue_size = broker.get_queue_size('market_research')
+
+# Get broker statistics
+stats = broker.get_statistics()
 ```
 
 ## API Endpoints
@@ -295,6 +342,15 @@ Each agent follows specific guidelines defined in `docs/agent_rulebooks/`:
 - Monetization Agent: Offer slot allocation, conversion funnel analysis  
 - Performance Analytics Agent: Coverage drift detection, anomaly alerting
 
+**Agent Rulebook Conventions** (when creating new rulebooks):
+- Define mission and core responsibilities
+- Specify decision heuristics with thresholds (e.g., "If coverage < 80% of target cluster weight → perform gap fill")
+- Document inputs → outputs mapping
+- List prohibited actions
+- Define failure handling strategies
+- Specify metrics tracked (e.g., coverage_percent, avg_heading_entropy)
+- Include future extension notes
+
 ### WordPress Deprecation
 The original WordPress integration has been removed in favor of headless architecture. The `wordpress_service.py` file remains as a stub to prevent import errors.
 
@@ -316,14 +372,32 @@ The system supports multiple blog niches with separate:
 
 ### Agent System Issues
 ```bash
-# Check Redis connection
+# Check Redis is running
 redis-cli ping
+# Should respond: PONG
 
-# View agent logs
+# View agent status in Redis
+redis-cli hgetall agent_status:orchestrator
+redis-cli hgetall agent_status:market_analytics
+
+# View all active agents
+redis-cli keys 'agent_status:*'
+
+# Check agent communication channels
+redis-cli pubsub channels agents.*
+
+# Monitor agent messages in real-time
+redis-cli psubscribe 'agents.*'
+
+# Check task queues
+redis-cli zcard task_queue:market_research
+redis-cli zrange task_queue:market_research 0 -1 WITHSCORES
+
+# Clear stuck task queues (CAUTION: development only)
+redis-cli del task_queue:market_research
+
+# View agent logs (if logging to file)
 tail -f automated-blog-system/logs/agent_system.log
-
-# Restart agent system
-# Kill existing processes and restart Flask server
 ```
 
 ### Database Issues
@@ -338,13 +412,57 @@ sqlite3 automated-blog-system/src/automated_blog_system.db ".tables"
 
 ### Frontend Issues
 ```bash
-# Clear node modules and reinstall
+# Clear dependencies and reinstall (project uses pnpm)
 cd blog-frontend
-rm -rf node_modules package-lock.json
+rm -rf node_modules pnpm-lock.yaml package-lock.json
+pnpm install
+# Or use npm if pnpm not available:
 npm install
 
 # Check Vite configuration
-npm run build --verbose
+cat vite.config.js
+
+# Build with verbose output
+pnpm build --verbose
+```
+
+### Common Port Conflicts
+```bash
+# Check what's running on Flask port (5000)
+lsof -i :5000
+kill -9 <PID>  # If needed
+
+# Check what's running on Vite port (5173)
+lsof -i :5173
+kill -9 <PID>  # If needed
+
+# Check what's running on Redis port (6379)
+lsof -i :6379
+kill -9 <PID>  # If needed
+```
+
+### Redis Connection Issues
+```bash
+# Check if Redis is installed
+redis-server --version
+
+# Install Redis (macOS with Homebrew)
+brew install redis
+
+# Start Redis server (foreground)
+redis-server
+
+# Start Redis as background service
+brew services start redis
+
+# Stop Redis service
+brew services stop redis
+
+# Check Redis configuration
+redis-cli config get '*'
+
+# Test Redis from Python
+python -c "import redis; r=redis.Redis(host='localhost', port=6379); print(r.ping())"
 ```
 
 This documentation reflects the current headless GPT-5 Marketing Stack architecture focused on autonomous content generation and multi-agent coordination. The system emphasizes scalable, AI-driven content creation with sophisticated knowledge retrieval and semantic optimization capabilities.

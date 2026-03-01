@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 
+
 # Add the parent directory to the Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -45,6 +46,13 @@ def create_app():
     except Exception as e:
         print(f"❌ Error registering blog blueprint: {e}")
     
+    try:
+        from src.routes.automation import automation_bp
+        app.register_blueprint(automation_bp, url_prefix='/api/automation')
+        print("✅ Automation blueprint registered successfully")
+    except Exception as e:
+        print(f"❌ Error registering automation blueprint: {e}")
+    
     # Serve React Frontend
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
@@ -66,25 +74,8 @@ if __name__ == '__main__':
     
     # Create tables
     with app.app_context():
+        from src.models.user import db
         db.create_all()
         logger.info("Database initialized successfully")
 
-    # Route to serve the main index.html for the React app
-    @app.route('/')
-    def serve_index():
-        return send_from_directory(app.static_folder, 'index.html')
-
-    # Route to handle all other routes for React routing (e.g., /niches, /products)
-    @app.errorhandler(404)
-    def not_found(e):
-        # Check if the request is for an API endpoint
-        if request.path.startswith('/api/'):
-            return jsonify({'error': 'Not Found', 'success': False}), 404
-        # Otherwise, serve the index.html for React routing
-        return send_from_directory(app.static_folder, 'index.html')
-
-    return app
-
-if __name__ == '__main__':
-    app = create_app()
     app.run(host='0.0.0.0', port=5000, debug=False)
