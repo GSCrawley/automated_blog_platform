@@ -68,6 +68,7 @@ class Article(db.Model):
     seo_score = db.Column(db.Float, default=0.0)
     readability_score = db.Column(db.Float, default=0.0)
     word_count = db.Column(db.Integer, default=0)
+    affiliate_links_count = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

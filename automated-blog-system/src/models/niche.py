@@ -18,6 +18,8 @@ class Niche(db.Model):
     competition_level = db.Column(db.String(20), default='medium')  # low, medium, high
     profitability_score = db.Column(db.Integer, default=0)  # 0-100
     active = db.Column(db.Boolean, default=True)
+    pipeline_status = db.Column(db.String(30), default='idle')  # idle, discovering_products, generating_articles, completed, error
+    pipeline_message = db.Column(db.Text, default='')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -39,6 +41,8 @@ class Niche(db.Model):
             'competition_level': self.competition_level,
             'profitability_score': self.profitability_score,
             'active': self.active,
+            'pipeline_status': self.pipeline_status,
+            'pipeline_message': self.pipeline_message,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'products_count': len(self.products) if self.products else 0,

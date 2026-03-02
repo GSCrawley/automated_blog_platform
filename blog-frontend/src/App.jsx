@@ -12,6 +12,7 @@ import UiTest from './components/UiTest'
 import ProductsSimple from './components/ProductsSimple'
 import ArticlesSimple from './components/ArticlesSimple'
 import NichesSimple from './components/NichesSimple'
+import Analytics from './components/Analytics'
 import './App.css'
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
           <Route path="/products-debug" element={<ProductsDebug />} />
           <Route path="/ui-test" element={<UiTest />} />
           <Route path="/products-simple" element={<ProductsSimple />} />
+          <Route path="/analytics" element={<Analytics />} />
           {/* Add other routes here as needed */}
         </Routes>
       </Layout>

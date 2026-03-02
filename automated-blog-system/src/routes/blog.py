@@ -308,10 +308,12 @@ def get_niches():
 
 @blog_bp.route('/niches', methods=['POST'])
 def create_niche():
-    """Create a new niche."""
+    """Create a new niche and auto-trigger the product/article pipeline."""
     try:
         from src.models.niche import Niche
         from src.models.user import db
+        from src.services.niche_pipeline import NichePipelineService
+        from flask import current_app
         
         data = request.get_json()
         
@@ -333,15 +335,21 @@ def create_niche():
             content_themes=data.get('content_themes', ''),
             affiliate_networks=data.get('affiliate_networks', ''),
             competition_level=data.get('competition_level', 'medium'),
-            profitability_score=data.get('profitability_score', 0)
+            profitability_score=data.get('profitability_score', 0),
+            pipeline_status='idle'
         )
         
         db.session.add(niche)
         db.session.commit()
         
+        # Auto-trigger the pipeline in the background
+        pipeline = NichePipelineService()
+        pipeline.run_pipeline(current_app._get_current_object(), niche.id)
+        
         return jsonify({
             'success': True,
-            'niche': niche.to_dict()
+            'niche': niche.to_dict(),
+            'message': 'Niche created. Product discovery and article generation started automatically.'
         })
         
     except Exception as e:
@@ -405,5 +413,51 @@ def delete_niche(niche_id):
         
     except Exception as e:
         logger.error(f"Error deleting niche: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@blog_bp.route('/niches/<int:niche_id>/pipeline-status', methods=['GET'])
+def get_pipeline_status(niche_id):
+    """Get the content pipeline status for a niche."""
+    try:
+        from src.models.niche import Niche
+        niche = Niche.query.get_or_404(niche_id)
+        return jsonify({
+            'success': True,
+            'pipeline_status': niche.pipeline_status,
+            'pipeline_message': niche.pipeline_message,
+            'products_count': len(niche.products) if niche.products else 0,
+            'articles_count': len(niche.articles) if niche.articles else 0,
+        })
+    except Exception as e:
+        logger.error(f"Error fetching pipeline status: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@blog_bp.route('/niches/<int:niche_id>/run-pipeline', methods=['POST'])
+def run_niche_pipeline(niche_id):
+    """Manually trigger the product discovery + article generation pipeline."""
+    try:
+        from src.models.niche import Niche
+        from src.services.niche_pipeline import NichePipelineService
+        from flask import current_app
+
+        niche = Niche.query.get_or_404(niche_id)
+
+        if niche.pipeline_status in ('discovering_products', 'generating_articles'):
+            return jsonify({
+                'success': False,
+                'error': 'Pipeline is already running for this niche'
+            }), 409
+
+        pipeline = NichePipelineService()
+        pipeline.run_pipeline(current_app._get_current_object(), niche.id)
+
+        return jsonify({
+            'success': True,
+            'message': 'Pipeline triggered. Products and articles will be generated in the background.'
+        })
+    except Exception as e:
+        logger.error(f"Error triggering pipeline: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 

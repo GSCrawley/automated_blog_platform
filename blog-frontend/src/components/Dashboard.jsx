@@ -17,6 +17,7 @@ import {
   Settings,
   Plus
 } from 'lucide-react'
+import { blogApi, automationApi } from '@/services/api'
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -44,13 +45,10 @@ const Dashboard = () => {
   const fetchDashboardStats = async () => {
     try {
       // Try to fetch products and articles to build stats
-      const [productsResponse, articlesResponse] = await Promise.all([
-        fetch("http://localhost:5000/api/blog/products"),
-        fetch("http://localhost:5000/api/blog/articles")
+      const [productsData, articlesData] = await Promise.all([
+        blogApi.getProducts(),
+        blogApi.getArticles()
       ])
-      
-      const productsData = await productsResponse.json()
-      const articlesData = await articlesResponse.json()
       
       if (productsData.success && articlesData.success) {
         const products = productsData.products || []
@@ -87,8 +85,7 @@ const Dashboard = () => {
 
   const fetchSchedulerStatus = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/automation/scheduler/status")
-      const data = await response.json()
+      const data = await automationApi.getSchedulerStatus()
       if (data.success) {
         setSchedulerStatus({
           running: data.status.is_running,
@@ -103,15 +100,13 @@ const Dashboard = () => {
 
   const toggleScheduler = async () => {
     try {
-      const endpoint = schedulerStatus.running ? "stop" : "start"
-      const response = await fetch(`http://localhost:5000/api/automation/scheduler/${endpoint}`, {
-        method: "POST"
-      })
-      const data = await response.json()
+      const data = schedulerStatus.running 
+        ? await automationApi.stopScheduler()
+        : await automationApi.startScheduler()
       if (data.success) {
         fetchSchedulerStatus() // Refresh status after toggle
       } else {
-        console.error(`Error ${endpoint}ing scheduler:`, data.error)
+        console.error(`Error toggling scheduler:`, data.error)
       }
     } catch (error) {
       console.error(`Error toggling scheduler:`, error)
@@ -120,20 +115,16 @@ const Dashboard = () => {
 
   const runTaskManually = async (taskName) => {
     try {
-      let endpoint = ""
+      let data
       if (taskName === "content_generation") {
-        endpoint = "trigger-content-generation"
+        data = await automationApi.triggerContentGeneration()
       } else if (taskName === "content_update") {
-        endpoint = "trigger-content-update"
+        data = await automationApi.triggerContentUpdate()
       } else {
         console.log(`Task ${taskName} not implemented yet`)
         return
       }
       
-      const response = await fetch(`http://localhost:5000/api/automation/scheduler/${endpoint}`, {
-        method: "POST"
-      })
-      const data = await response.json()
       if (data.success) {
         console.log(`Task ${taskName} executed successfully`)
         fetchDashboardStats() // Refresh stats after task

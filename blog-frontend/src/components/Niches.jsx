@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Target, Edit, Trash2, TrendingUp, Users, DollarSign } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, Target, Edit, Trash2, TrendingUp, Users, DollarSign, Loader2, RefreshCw, Rocket, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { blogApi } from '@/services/api';
 
 const Niches = () => {
   const [niches, setNiches] = useState([]);
@@ -28,10 +29,22 @@ const Niches = () => {
     fetchNiches();
   }, []);
 
+  // Poll pipeline status for niches that are in-progress
+  useEffect(() => {
+    const activeNiches = niches.filter(
+      n => n.pipeline_status === 'discovering_products' || n.pipeline_status === 'generating_articles'
+    );
+    if (activeNiches.length === 0) return;
+
+    const interval = setInterval(() => {
+      fetchNiches();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [niches]);
+
   const fetchNiches = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/blog/niches');
-      const data = await response.json();
+      const data = await blogApi.getNiches();
       if (data.success) {
         setNiches(data.niches);
       }
@@ -45,21 +58,10 @@ const Niches = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const url = editingNiche 
-        ? `http://localhost:5000/api/blog/niches/${editingNiche.id}`
-        : 'http://localhost:5000/api/blog/niches';
-      
-      const method = editingNiche ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      const data = editingNiche
+        ? await blogApi.updateNiche(editingNiche.id, formData)
+        : await blogApi.createNiche(formData);
 
-      const data = await response.json();
       if (data.success) {
         fetchNiches();
         setIsDialogOpen(false);
@@ -91,16 +93,26 @@ const Niches = () => {
   const handleDelete = async (nicheId) => {
     if (window.confirm('Are you sure you want to delete this niche?')) {
       try {
-        const response = await fetch(`http://localhost:5000/api/blog/niches/${nicheId}`, {
-          method: 'DELETE',
-        });
-        const data = await response.json();
+        const data = await blogApi.deleteNiche(nicheId);
         if (data.success) {
           fetchNiches();
         }
       } catch (error) {
         console.error('Error deleting niche:', error);
       }
+    }
+  };
+
+  const handleRunPipeline = async (nicheId) => {
+    try {
+      const data = await blogApi.runNichePipeline(nicheId);
+      if (data.success) {
+        fetchNiches();
+      } else {
+        console.error('Error running pipeline:', data.error);
+      }
+    } catch (error) {
+      console.error('Error running pipeline:', error);
     }
   };
 
@@ -355,6 +367,58 @@ const Niches = () => {
                   <span className="font-medium">{niche.articles_count || 0}</span>
                 </div>
               </div>
+
+              {/* Pipeline Status */}
+              {niche.pipeline_status && niche.pipeline_status !== 'idle' && (
+                <div className={`mt-4 p-3 rounded-lg text-sm ${
+                  niche.pipeline_status === 'completed' ? 'bg-green-50 border border-green-200' :
+                  niche.pipeline_status === 'error' ? 'bg-red-50 border border-red-200' :
+                  'bg-blue-50 border border-blue-200'
+                }`}>
+                  <div className="flex items-center space-x-2">
+                    {(niche.pipeline_status === 'discovering_products' || niche.pipeline_status === 'generating_articles') && (
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                    )}
+                    {niche.pipeline_status === 'completed' && (
+                      <CheckCircle2 className="w-4 h-4 text-green-600" />
+                    )}
+                    {niche.pipeline_status === 'error' && (
+                      <AlertCircle className="w-4 h-4 text-red-600" />
+                    )}
+                    <span className={`font-medium ${
+                      niche.pipeline_status === 'completed' ? 'text-green-700' :
+                      niche.pipeline_status === 'error' ? 'text-red-700' :
+                      'text-blue-700'
+                    }`}>
+                      {niche.pipeline_status === 'discovering_products' ? 'Discovering Products...' :
+                       niche.pipeline_status === 'generating_articles' ? 'Generating Articles...' :
+                       niche.pipeline_status === 'completed' ? 'Pipeline Complete' :
+                       niche.pipeline_status === 'error' ? 'Pipeline Error' :
+                       niche.pipeline_status}
+                    </span>
+                  </div>
+                  {niche.pipeline_message && (
+                    <p className="mt-1 text-xs text-gray-600">{niche.pipeline_message}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Run Pipeline Button */}
+              {(!niche.pipeline_status || niche.pipeline_status === 'idle' || niche.pipeline_status === 'completed' || niche.pipeline_status === 'error') && (
+                <div className="mt-4">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleRunPipeline(niche.id)}
+                    className="w-full text-blue-600 border-blue-200 hover:bg-blue-50"
+                  >
+                    <Rocket className="w-4 h-4 mr-2" />
+                    {niche.pipeline_status === 'completed' ? 'Re-run Pipeline' : 
+                     niche.pipeline_status === 'error' ? 'Retry Pipeline' : 
+                     'Discover Products & Generate Articles'}
+                  </Button>
+                </div>
+              )}
 
               {niche.target_keywords && niche.target_keywords.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-gray-100">

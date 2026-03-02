@@ -97,6 +97,11 @@ export const blogApi = {
   deleteNiche: (id) => request(`/blog/niches/${id}`, {
     method: 'DELETE',
   }),
+  // Pipeline
+  getNichePipelineStatus: (id) => request(`/blog/niches/${id}/pipeline-status`),
+  runNichePipeline: (id) => request(`/blog/niches/${id}/run-pipeline`, {
+    method: 'POST',
+  }),
 };
 
 /**
