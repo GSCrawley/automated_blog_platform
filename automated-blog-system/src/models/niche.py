@@ -8,6 +8,7 @@ class Niche(db.Model):
     __tablename__ = 'niches'
     
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
     description = db.Column(db.Text)
     target_keywords = db.Column(db.Text)  # Comma-separated keywords
@@ -51,4 +52,3 @@ class Niche(db.Model):
     
     def __repr__(self):
         return f'<Niche {self.name}>'
-

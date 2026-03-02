@@ -167,6 +167,47 @@ def get_articles():
         logger.error(f"Error fetching articles: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+
+@blog_bp.route('/articles', methods=['POST'])
+def create_article():
+    """Create a new article entry."""
+    try:
+        from src.models.product import Article, Product
+        from src.models.user import db
+
+        data = request.get_json()
+
+        required_fields = ['title', 'content', 'product_id']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'error': f'{field} is required'}), 400
+
+        product = Product.query.get_or_404(data['product_id'])
+
+        niche_id = data.get('niche_id') or product.niche_id
+        keywords = data.get('keywords', [])
+
+        article = Article(
+            title=data['title'],
+            content=data['content'],
+            meta_description=data.get('meta_description'),
+            keywords=json.dumps(keywords),
+            status=data.get('status', 'draft'),
+            product_id=product.id,
+            niche_id=niche_id,
+            seo_score=data.get('seo_score', 0.0),
+            readability_score=data.get('readability_score', 0.0),
+            word_count=len(data['content'].split()),
+        )
+
+        db.session.add(article)
+        db.session.commit()
+
+        return jsonify({'success': True, 'article': article.to_dict()}), 201
+    except Exception as e:
+        logger.error(f"Error creating article: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @blog_bp.route('/articles/<int:article_id>', methods=['GET'])
 def get_article(article_id):
     """Get a specific article."""
@@ -209,6 +250,23 @@ def update_article(article_id):
         })
     except Exception as e:
         logger.error(f"Error updating article: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@blog_bp.route('/articles/<int:article_id>', methods=['DELETE'])
+def delete_article(article_id):
+    """Delete an article."""
+    try:
+        from src.models.product import Article
+        from src.models.user import db
+
+        article = Article.query.get_or_404(article_id)
+        db.session.delete(article)
+        db.session.commit()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error deleting article: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @blog_bp.route('/optimize-content', methods=['POST'])
@@ -414,6 +472,7 @@ def delete_niche(niche_id):
     except Exception as e:
         logger.error(f"Error deleting niche: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+<<<<<<< HEAD
 
 
 @blog_bp.route('/niches/<int:niche_id>/pipeline-status', methods=['GET'])
@@ -461,3 +520,5 @@ def run_niche_pipeline(niche_id):
         logger.error(f"Error triggering pipeline: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+=======
+>>>>>>> ed918b5671b636d16ad433e0f66f54e811b8de0f

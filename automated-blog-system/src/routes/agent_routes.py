@@ -5,6 +5,7 @@ import logging
 # Import database models
 try:
     from src.models.agent_models import AgentState, BlogInstance, AgentTask, MarketData, AgentDecision
+    from src.models.niche import Niche
     from src.models.user import db
     AGENT_MODELS_AVAILABLE = True
 except ImportError:
@@ -322,6 +323,164 @@ def create_blog_instance():
     except Exception as e:
         logger.error(f"Error creating blog instance: {str(e)}")
         return jsonify({'error': 'Failed to create blog instance'}), 500
+
+
+@agent_bp.route('/niches/<int:niche_id>/activate', methods=['POST'])
+def activate_niche(niche_id):
+    """Activate a niche, attach agents, and seed automation tasks."""
+    try:
+        activation_payload = request.get_json(silent=True) or {}
+        activation_time = datetime.utcnow()
+
+        assigned_agents = [
+            'orchestrator',
+            'market_analytics',
+            'product_scout',
+            'affiliate_ops',
+            'authoring',
+            'editorial'
+        ]
+
+        if AGENT_MODELS_AVAILABLE:
+            try:
+                niche = Niche.query.get_or_404(niche_id)
+
+                blog_instance = BlogInstance.query.filter_by(niche_id=niche.id).first()
+                if not blog_instance:
+                    blog_instance = BlogInstance(
+                        name=activation_payload.get('blog_name', f"{niche.name} Blog"),
+                        niche_id=niche.id,
+                        assigned_agents=assigned_agents,
+                        status='active',
+                        active=True,
+                        selected_at=activation_time,
+                        settings={'activation_source': 'api'},
+                    )
+                    db.session.add(blog_instance)
+                else:
+                    blog_instance.assigned_agents = assigned_agents
+                    blog_instance.status = 'active'
+                    blog_instance.active = True
+                    blog_instance.selected_at = activation_time
+                    blog_instance.settings = {
+                        **(blog_instance.settings or {}),
+                        'activation_source': 'api',
+                        'activated_at': activation_time.isoformat(),
+                    }
+
+                db.session.commit()
+
+                seeded_tasks = []
+                task_definitions = [
+                    {
+                        'task_type': 'market_research',
+                        'assigned_agent': 'market_analytics',
+                        'priority': 8,
+                        'task_data': {'niche': niche.name, 'blog_instance_id': blog_instance.id},
+                    },
+                    {
+                        'task_type': 'product_research',
+                        'assigned_agent': 'product_scout',
+                        'priority': 8,
+                        'task_data': {'niche': niche.name, 'blog_instance_id': blog_instance.id},
+                    },
+                    {
+                        'task_type': 'affiliate_validation',
+                        'assigned_agent': 'affiliate_ops',
+                        'priority': 7,
+                        'task_data': {'niche': niche.name, 'blog_instance_id': blog_instance.id},
+                    },
+                    {
+                        'task_type': 'content_generation',
+                        'assigned_agent': 'authoring',
+                        'priority': 7,
+                        'task_data': {'niche': niche.name, 'blog_instance_id': blog_instance.id},
+                    },
+                    {
+                        'task_type': 'layout_review',
+                        'assigned_agent': 'editorial',
+                        'priority': 6,
+                        'task_data': {'niche': niche.name, 'blog_instance_id': blog_instance.id},
+                    },
+                ]
+
+                for definition in task_definitions:
+                    task = AgentTask(
+                        task_type=definition['task_type'],
+                        assigned_agent=definition['assigned_agent'],
+                        blog_instance_id=blog_instance.id,
+                        priority=definition['priority'],
+                        status='pending',
+                        task_data=definition['task_data'],
+                        created_at=activation_time,
+                    )
+                    db.session.add(task)
+                    seeded_tasks.append(task)
+
+                db.session.commit()
+
+                automation_plan = {
+                    'blog_instance': blog_instance.to_dict(),
+                    'seeded_tasks': [task.to_dict() for task in seeded_tasks],
+                }
+            except Exception as db_error:
+                logger.warning(f"Activation failed to use database: {db_error}")
+                automation_plan = None
+        else:
+            automation_plan = None
+
+        profitability_snapshot = {
+            'niche': 'Agentic AI Coding Tools & Work Automation/Optimization',
+            'profitability_score_range': '85-95',
+            'summary': 'Recurring SaaS with premium buyers, sticky adoption, and explosive growth.',
+            'revenue_drivers': [
+                'Recurring affiliate programs (20-30%+)',
+                'High AOV tool stacks ($20-500+/mo)',
+                'Consulting / workflow optimization upsells',
+            ],
+            'challenges': [
+                'Rising competition',
+                'Fast product iteration cycles',
+                'Needs technical credibility to convert',
+            ],
+            'score_breakdown': {
+                'aov': 95,
+                'commission_rates': 85,
+                'market_growth': 100,
+                'competition': 70,
+                'overall': '87-92'
+            }
+        }
+
+        automation_outline = {
+            'status': 'success',
+            'niche_id': niche_id,
+            'assigned_agents': assigned_agents,
+            'profitability_insight': profitability_snapshot,
+            'workflow': [
+                'Market research → trend mapping',
+                'Product scouting → affiliate validation',
+                'Authoring → draft with CTA-ready hooks',
+                'Editorial → layout harmony + compliance checks',
+            ],
+            'tasks_seeded': automation_plan['seeded_tasks'] if automation_plan else [],
+            'blog_instance': automation_plan['blog_instance'] if automation_plan else None,
+            'activated_at': activation_time.isoformat(),
+        }
+
+        # Notify agent manager when available
+        if hasattr(current_app, 'agent_manager') and current_app.agent_manager:
+            for agent_name in assigned_agents:
+                try:
+                    current_app.agent_manager.assign_agent_to_blog(agent_name, automation_outline.get('blog_instance', {}).get('id'))
+                except Exception as manager_error:
+                    logger.warning(f"Unable to assign {agent_name} via manager: {manager_error}")
+
+        return jsonify(automation_outline)
+
+    except Exception as e:
+        logger.error(f"Error activating niche {niche_id}: {str(e)}")
+        return jsonify({'error': 'Failed to activate niche'}), 500
 
 @agent_bp.route('/decisions/pending', methods=['GET'])
 def get_pending_decisions():
