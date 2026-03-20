@@ -2,9 +2,11 @@ import os
 import sys
 import logging
 
-
 # Add the parent directory to the Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+# Add core directory to path for agent imports
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), '..'))
 
 from flask import Flask, send_from_directory, request, jsonify
 from flask_cors import CORS
@@ -19,19 +21,38 @@ def create_app():
     app = Flask(__name__, static_folder='../static', static_url_path='/')
     app.config.from_object(Config)
     Config.init_app(app)
-    
+
     # Initialize database
     from src.models.user import db
     db.init_app(app)
-    
+
     # Initialize CORS
     CORS(app)
-    
-    # Import models
+
+    # Import models (ensures tables are created)
     from src.models.product import Product, Article
     from src.models.niche import Niche
     from src.models.agent_models import AgentState, BlogInstance, AgentTask, AgentDecision
-    
+
+    # Initialize Agent Manager (attached to app for route access)
+    try:
+        # Import from core directory (relative to project root)
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        core_agents_path = os.path.join(project_root, 'core')
+        if core_agents_path not in sys.path:
+            sys.path.insert(0, core_agents_path)
+
+        from agents.agent_manager import AgentManager
+        app.agent_manager = AgentManager(
+            redis_host=app.config.get('REDIS_HOST', 'localhost'),
+            redis_port=app.config.get('REDIS_PORT', 6379)
+        )
+        print("✅ Agent Manager initialized successfully")
+    except Exception as e:
+        print(f"⚠️ Agent Manager initialization failed: {e}")
+        print("   Agent routes will use mock data fallback")
+        app.agent_manager = None
+
     # Register blueprints with debug prints
     try:
         from src.routes.user import user_bp
@@ -39,7 +60,7 @@ def create_app():
         print("✅ User blueprint registered successfully")
     except Exception as e:
         print(f"❌ Error registering user blueprint: {e}")
-    
+
     try:
         from src.routes.blog import blog_bp
         app.register_blueprint(blog_bp, url_prefix='/api/blog')
@@ -60,14 +81,7 @@ def create_app():
         print("✅ Automation blueprint registered successfully")
     except Exception as e:
         print(f"❌ Error registering automation blueprint: {e}")
-    
-    try:
-        from src.routes.automation import automation_bp
-        app.register_blueprint(automation_bp, url_prefix='/api/automation')
-        print("✅ Automation blueprint registered successfully")
-    except Exception as e:
-        print(f"❌ Error registering automation blueprint: {e}")
-    
+
     # Serve React Frontend
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
@@ -77,12 +91,20 @@ def create_app():
         else:
             return send_from_directory(app.static_folder, 'index.html')
 
+    # Error handler for 404 - serve React app for non-API routes
+    @app.errorhandler(404)
+    def not_found(e):
+        # Check if the request is for an API endpoint
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'Not Found', 'success': False}), 404
+        # Otherwise, serve the index.html for React routing
+        return send_from_directory(app.static_folder, 'index.html')
+
     # Print all registered routes
     print("\n📋 Registered routes:")
     for rule in app.url_map.iter_rules():
         print(f"  {rule.methods} {rule.rule}")
-    
-    
+
     return app
 
 if __name__ == '__main__':
@@ -93,34 +115,8 @@ if __name__ == '__main__':
     
     # Create tables
     with app.app_context():
-        from src.models.user import db
         db.create_all()
         logger.info("Database initialized successfully")
 
+    # Start the Flask server
     app.run(host='0.0.0.0', port=5000, debug=False)
-    # Route to serve the main index.html for the React app
-    @app.route('/')
-    def serve_index():
-        return send_from_directory(app.static_folder, 'index.html')
-
-    # Route to handle all other routes for React routing (e.g., /niches, /products)
-    @app.errorhandler(404)
-    def not_found(e):
-        # Check if the request is for an API endpoint
-        if request.path.startswith('/api/'):
-            return jsonify({'error': 'Not Found', 'success': False}), 404
-        # Otherwise, serve the index.html for React routing
-        return send_from_directory(app.static_folder, 'index.html')
-
-        return app
-
-if __name__ == '__main__':
-    flask_app = create_app()
-
-    # Create tables
-    from src.models.user import db
-    with flask_app.app_context():
-        db.create_all()
-        logger.info("Database initialized successfully")
-
-    flask_app.run(host='0.0.0.0', port=5000, debug=False)
