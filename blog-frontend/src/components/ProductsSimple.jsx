@@ -202,7 +202,7 @@ const ProductsSimple = () => {
       return;
     }
     
-    setIsSubmitting(true);
+    setSubmitting(true);
     try {
       console.log('ProductsSimple: Updating product:', editingProduct.id, formData);
       
@@ -233,7 +233,7 @@ const ProductsSimple = () => {
       console.error('ProductsSimple: Error updating product:', error);
       setError('Error updating product. Please try again.');
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
@@ -607,14 +607,14 @@ const ProductsSimple = () => {
             <div className="flex gap-4 pt-4">
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={submitting}
                 className={`px-6 py-2 rounded-md text-white font-medium ${
-                  isSubmitting
+                  submitting
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-blue-500 hover:bg-blue-600'
                 }`}
               >
-                {isSubmitting ? 'Updating...' : 'Update Product'}
+                {submitting ? 'Updating...' : 'Update Product'}
               </button>
               <button
                 type="button"
