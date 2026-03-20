@@ -37,7 +37,7 @@ const ArticlesSimple = () => {
       } else {
         setError('Failed to fetch articles: ' + data.error);
       }
-    } catch (error) {
+    } catch {
       setError('Error fetching articles. Please try again.');
     } finally {
       setLoading(false);
@@ -50,7 +50,7 @@ const ArticlesSimple = () => {
       if (data.success) {
         setProducts(data.products || []);
       }
-    } catch (error) {
+    } catch {
       console.error('Error fetching products:', error);
     }
   };
@@ -108,7 +108,7 @@ const ArticlesSimple = () => {
       } else {
         setError('Failed to create article: ' + (response.error || 'Unknown error'));
       }
-    } catch (error) {
+    } catch {
       setError('Error creating article. Please try again.');
     } finally {
       setSubmitting(false);
@@ -148,7 +148,7 @@ const ArticlesSimple = () => {
       } else {
         setError('Failed to delete article: ' + (response.error || 'Unknown error'));
       }
-    } catch (error) {
+    } catch {
       setError('Error deleting article. Please try again.');
     } finally {
       setDeleting(null);
@@ -204,7 +204,7 @@ const ArticlesSimple = () => {
       } else {
         setError('Failed to update article: ' + (response.error || 'Unknown error'));
       }
-    } catch (error) {
+    } catch {
       setError('Error updating article. Please try again.');
     } finally {
       setSubmitting(false);

@@ -33,7 +33,7 @@ const NichesSimple = () => {
       } else {
         setError('Failed to fetch niches: ' + data.error);
       }
-    } catch (error) {
+    } catch {
       setError('Error fetching niches. Please try again.');
     } finally {
       setLoading(false);
@@ -87,7 +87,7 @@ const NichesSimple = () => {
       } else {
         setError('Failed to create niche: ' + (response.error || 'Unknown error'));
       }
-    } catch (error) {
+    } catch {
       setError('Error creating niche. Please try again.');
     } finally {
       setSubmitting(false);
@@ -125,7 +125,7 @@ const NichesSimple = () => {
       } else {
         setError('Failed to delete niche: ' + (response.error || 'Unknown error'));
       }
-    } catch (error) {
+    } catch {
       setError('Error deleting niche. Please try again.');
     } finally {
       setDeleting(null);
@@ -179,7 +179,7 @@ const NichesSimple = () => {
       } else {
         setError('Failed to update niche: ' + (response.error || 'Unknown error'));
       }
-    } catch (error) {
+    } catch {
       setError('Error updating niche. Please try again.');
     } finally {
       setSubmitting(false);
