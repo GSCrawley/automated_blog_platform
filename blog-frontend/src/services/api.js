@@ -71,6 +71,10 @@ export const blogApi = {
   deleteArticle: (id) => request(`/blog/articles/${id}`, {
     method: 'DELETE',
   }),
+  conversationalEdit: (id, data) => request(`/blog/articles/${id}/conversational-edit`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
   
   // WordPress endpoints removed in headless pivot
   

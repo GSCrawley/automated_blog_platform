@@ -23,6 +23,10 @@ class Config:
     TAVILY_API_KEY = os.getenv('TAVILY_API_KEY')
     SERPER_API_KEY = os.getenv('SERPER_API_KEY')
     CREWAI_STORAGE_DIR = os.getenv('CREWAI_STORAGE_DIR', './data/crewai_memory')
+
+    # Google Cloud Storage settings
+    GCS_BUCKET_NAME = os.getenv('GCS_BUCKET_NAME')
+    GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
     
     @classmethod
     def init_app(cls, app):

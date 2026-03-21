@@ -10,7 +10,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { blogApi } from '@/services/api';
+import ConversationalEditor from './ConversationalEditor';
 
 const Articles = () => {
   const [articles, setArticles] = useState([]);
@@ -141,6 +143,14 @@ const Articles = () => {
 
   const handleFormChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleContentUpdate = (newContent, newTitle) => {
+    setFormData(prev => ({
+      ...prev,
+      content: newContent,
+      title: newTitle || prev.title
+    }));
   };
 
   const handleViewArticle = (article) => {
@@ -492,95 +502,111 @@ const Articles = () => {
 
     {/* Edit Article Dialog */}
     <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Article</DialogTitle>
           <DialogDescription>
             Update your article content and settings.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="edit_title">Title</Label>
-            <Input
-              id="edit_title"
-              placeholder="Enter article title..."
-              value={formData.title}
-              onChange={(e) => handleFormChange('title', e.target.value)}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="edit_product_id">Associated Product</Label>
-            <Select value={formData.product_id} onValueChange={(value) => handleFormChange('product_id', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a product" />
-              </SelectTrigger>
-              <SelectContent>
-                {products.map((product) => (
-                  <SelectItem key={product.id} value={product.id.toString()}>
-                    {product.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="edit_content">Content</Label>
-            <Textarea
-              id="edit_content"
-              placeholder="Enter article content..."
-              value={formData.content}
-              onChange={(e) => handleFormChange('content', e.target.value)}
-              rows={8}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="edit_primary_keywords">Primary Keywords</Label>
-              <Input
-                id="edit_primary_keywords"
-                placeholder="keyword1, keyword2, keyword3"
-                value={formData.primary_keywords}
-                onChange={(e) => handleFormChange('primary_keywords', e.target.value)}
+        <Tabs defaultValue="form" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="form">Traditional Form</TabsTrigger>
+            <TabsTrigger value="conversational">Conversational Editor</TabsTrigger>
+          </TabsList>
+          <TabsContent value="form" className="space-y-4">
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit_title">Title</Label>
+                <Input
+                  id="edit_title"
+                  placeholder="Enter article title..."
+                  value={formData.title}
+                  onChange={(e) => handleFormChange('title', e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit_product_id">Associated Product</Label>
+                <Select value={formData.product_id} onValueChange={(value) => handleFormChange('product_id', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a product" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map((product) => (
+                      <SelectItem key={product.id} value={product.id.toString()}>
+                        {product.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit_content">Content</Label>
+                <Textarea
+                  id="edit_content"
+                  placeholder="Enter article content..."
+                  value={formData.content}
+                  onChange={(e) => handleFormChange('content', e.target.value)}
+                  rows={8}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit_primary_keywords">Primary Keywords</Label>
+                  <Input
+                    id="edit_primary_keywords"
+                    placeholder="keyword1, keyword2, keyword3"
+                    value={formData.primary_keywords}
+                    onChange={(e) => handleFormChange('primary_keywords', e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit_secondary_keywords">Secondary Keywords</Label>
+                  <Input
+                    id="edit_secondary_keywords"
+                    placeholder="keyword1, keyword2, keyword3"
+                    value={formData.secondary_keywords}
+                    onChange={(e) => handleFormChange('secondary_keywords', e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit_meta_description">Meta Description</Label>
+                <Textarea
+                  id="edit_meta_description"
+                  placeholder="SEO meta description..."
+                  value={formData.meta_description}
+                  onChange={(e) => handleFormChange('meta_description', e.target.value)}
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit_status">Status</Label>
+                  <Select value={formData.status} onValueChange={(value) => handleFormChange('status', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="published">Published</SelectItem>
+                      <SelectItem value="scheduled">Scheduled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* WordPress update checkbox removed */}
+              </div>
+            </div>
+          </TabsContent>
+          <TabsContent value="conversational" className="space-y-4">
+            {editingArticle && (
+              <ConversationalEditor
+                article={editingArticle}
+                onContentUpdate={handleContentUpdate}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit_secondary_keywords">Secondary Keywords</Label>
-              <Input
-                id="edit_secondary_keywords"
-                placeholder="keyword1, keyword2, keyword3"
-                value={formData.secondary_keywords}
-                onChange={(e) => handleFormChange('secondary_keywords', e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="edit_meta_description">Meta Description</Label>
-            <Textarea
-              id="edit_meta_description"
-              placeholder="SEO meta description..."
-              value={formData.meta_description}
-              onChange={(e) => handleFormChange('meta_description', e.target.value)}
-              rows={3}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="edit_status">Status</Label>
-              <Select value={formData.status} onValueChange={(value) => handleFormChange('status', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="published">Published</SelectItem>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {/* WordPress update checkbox removed */}
-          </div>
-        </div>
+            )}
+          </TabsContent>
+        </Tabs>
         <DialogFooter>
           <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={updating}>
             Cancel

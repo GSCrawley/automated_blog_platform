@@ -1,7 +1,11 @@
 from flask import Blueprint, request, jsonify
 import logging
 import json
+import os
+import tempfile
 from datetime import datetime
+from werkzeug.utils import secure_filename
+from google.cloud import storage
 
 logger = logging.getLogger(__name__)
 blog_bp = Blueprint('blog', __name__)
@@ -574,4 +578,137 @@ def run_niche_pipeline(niche_id):
         })
     except Exception as e:
         logger.error(f"Error triggering pipeline: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@blog_bp.route('/upload-media', methods=['POST'])
+def upload_media():
+    """Upload media file to Google Cloud Storage."""
+    try:
+        from src.config import Config
+
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': 'No file provided'}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'No file selected'}), 400
+
+        # Validate file type
+        allowed_mime_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm', 'video/ogg']
+        if file.content_type not in allowed_mime_types:
+            return jsonify({'success': False, 'error': 'File type not allowed. Only images and videos are supported.'}), 400
+
+        # Validate file size (10MB limit)
+        file.seek(0, os.SEEK_END)
+        file_size = file.tell()
+        file.seek(0)
+        max_size = 10 * 1024 * 1024  # 10MB
+        if file_size > max_size:
+            return jsonify({'success': False, 'error': 'File size exceeds 10MB limit'}), 400
+
+        # Secure filename
+        filename = secure_filename(file.filename or '')
+
+        # Create temp file
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            file.save(temp_file.name)
+            temp_path = temp_file.name
+
+        try:
+            # Upload to GCS
+            client = storage.Client()
+            bucket = client.bucket(Config.GCS_BUCKET_NAME)
+            blob_name = f"uploads/{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{filename}"
+            blob = bucket.blob(blob_name)
+            blob.upload_from_filename(temp_path, content_type=file.content_type)
+            blob.make_public()
+
+            public_url = blob.public_url
+
+            return jsonify({
+                'success': True,
+                'url': public_url,
+                'filename': filename,
+                'size': file_size
+            })
+
+        finally:
+            # Clean up temp file
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+
+    except Exception as e:
+        logger.error(f"Error uploading media: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@blog_bp.route('/articles/<int:article_id>/conversational-edit', methods=['POST'])
+def conversational_edit_article(article_id):
+    """Apply conversational edits to an article."""
+    try:
+        from src.models.product import Article
+        from core.crewai_system.crews.conversational_editor_crew.conversational_editor_crew import ConversationalEditorCrew
+
+        # Get the article
+        article = Article.query.get_or_404(article_id)
+
+        # Get the command from request
+        data = request.get_json()
+        command = data.get('command')
+
+        if not command:
+            return jsonify({'success': False, 'error': 'Command is required'}), 400
+
+        # Initialize the conversational editor crew
+        editor_crew = ConversationalEditorCrew()
+
+        # Prepare inputs for the crew
+        inputs = {
+            'article_id': article_id,
+            'article_title': article.title,
+            'article_content': article.content,
+            'command': command,
+            'current_keywords': article.keywords or [],
+            'product_name': article.product.name if article.product else None
+        }
+
+        # Execute the editing workflow
+        result = editor_crew.crew().kickoff(inputs=inputs)
+
+        # Parse the result to get the modified article
+        if hasattr(result, 'json_dict') and result.json_dict:
+            modified_data = result.json_dict
+        elif hasattr(result, 'raw'):
+            # If result is raw text, we'd need to parse it
+            # For now, assume the crew returns structured data
+            modified_data = {'modified_content': result.raw}
+        else:
+            modified_data = {'modified_content': article.content}
+
+        # Update the article in database if changes were made
+        if 'modified_content' in modified_data:
+            article.content = modified_data['modified_content']
+            if 'modified_title' in modified_data:
+                article.title = modified_data['modified_title']
+            if 'modified_meta_description' in modified_data:
+                article.meta_description = modified_data['modified_meta_description']
+
+            # Update timestamps
+            from datetime import datetime
+            article.updated_at = datetime.utcnow()
+
+            # Commit changes
+            from src.models.user import db
+            db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'article': article.to_dict(),
+            'changes_applied': modified_data.get('changes', {}),
+            'command_processed': command
+        })
+
+    except Exception as e:
+        logger.error(f"Error in conversational editing: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500

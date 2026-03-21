@@ -1,0 +1,23 @@
+parse_command:
+  description: "Parse the natural language command into structured editing actions"
+  expected_output: "A structured representation of the editing action with action type, target, position, and content"
+
+coordinate_action:
+  description: "Determine the appropriate editing actions and validate against editorial standards"
+  expected_output: "A detailed action plan with specific changes to be made to the article"
+
+modify_content:
+  description: "Apply text-based modifications to the article content"
+  expected_output: "The modified article content with changes applied"
+
+handle_media:
+  description: "Manage media insertions and modifications in the article"
+  expected_output: "Article content with media elements properly inserted"
+
+validate_changes:
+  description: "Verify that all changes maintain content quality and editorial standards"
+  expected_output: "Quality assessment and final edited article ready for saving"
+
+apply_changes:
+  description: "Apply all validated changes to the article and save to database"
+  expected_output: "Successfully updated article with all conversational edits applied"

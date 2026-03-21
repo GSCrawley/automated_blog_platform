@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, Search, RefreshCw, AlertCircle, Loader2, Package } from 'lucide-react';
 import { blogApi } from '@/services/api';
+import MediaUpload from './MediaUpload';
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -526,13 +527,11 @@ const Products = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="image_url">Image URL</Label>
-                <Input
-                  id="image_url"
-                  type="url"
+                <MediaUpload
                   value={formData.image_url}
-                  onChange={(e) => handleInputChange('image_url', e.target.value)}
-                  placeholder="https://example.com/image.jpg"
+                  onChange={(value) => handleInputChange('image_url', value)}
+                  label="Product Image"
+                  placeholder="Upload product image or enter URL"
                 />
               </div>
             </div>
@@ -713,13 +712,11 @@ const Products = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="edit-image-url">Image URL</Label>
-                <Input
-                  id="edit-image-url"
-                  type="url"
+                <MediaUpload
                   value={formData.image_url}
-                  onChange={(e) => handleInputChange('image_url', e.target.value)}
-                  placeholder="https://example.com/image.jpg"
+                  onChange={(value) => handleInputChange('image_url', value)}
+                  label="Product Image"
+                  placeholder="Upload product image or enter URL"
                 />
               </div>
             </div>
