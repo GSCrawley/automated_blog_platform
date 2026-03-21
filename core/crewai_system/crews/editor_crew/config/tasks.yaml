@@ -1,0 +1,161 @@
+check_content_quality:
+  description: >
+    Review the article draft: {article_draft}
+      
+    FIRST, query the Target Blog Knowledge Graph for:
+    - Content standards and quality benchmarks: scope /target_blog/content_standards
+    - Target blog blueprint (ideal structure): scope /target_blog/competitor_intel
+    - Proven writing styles for this niche: scope /target_blog/psychology
+      
+    Then evaluate the draft against EVERY standard found in the KG. Score each
+    dimension on a 1-10 scale:
+    - Headline quality and click magnetism
+    - Introduction hook strength and psychological engagement
+    - Content depth and expertise demonstration (E-E-A-T)
+    - Value delivery vs. sales pitch balance
+    - Reading flow and transitions
+    - Section structure vs. ideal blueprint
+    - Conclusion and next-step clarity
+      
+    For any score below 8, provide SPECIFIC rewrite instructions.
+    Overall threshold: average score must be ≥7.5 to pass. If it fails,
+    return FAIL with a prioritized list of required revisions.
+  expected_output: >
+    JSON: {
+      "pass": true/false,
+      "overall_score": float,
+      "dimension_scores": {dimension: score},
+      "required_revisions": [list of specific changes if pass=false],
+      "recommendations": [list of improvement suggestions even if pass=true],
+      "kg_standards_consulted": [list of KG insights used]
+    }
+  agent: content_quality_editor
+
+audit_monetization:
+  description: >
+    Audit the article for monetization quality: {article_draft}
+      
+    FIRST, query the Target Blog Knowledge Graph for:
+    - Top affiliate programs and products: scope /target_blog/affiliate_programs
+    - Product opportunities and revenue potential: scope /target_blog/product_opportunities
+    - Monetization patterns that work: scope /target_blog/monetization_patterns
+      
+    Evaluate:
+    - Are the highest-commission affiliate products from the KG featured?
+    - Is affiliate link density within the optimal range (1 link per 300-500 words)?
+    - Are CTAs positioned at psychologically optimal points (after pain point articulation, after social proof, at conclusion)?
+    - Is there an email capture mechanism?
+    - Are FTC disclosures present at the top of the article?
+    - Is the monetization mix diverse (affiliate links + email + direct ads if available)?
+    - Revenue potential score vs. what the KG shows top performers achieve
+      
+    Threshold: monetization_score must be ≥7.0 to pass.
+  expected_output: >
+    JSON: {
+      "pass": true/false,
+      "monetization_score": float,
+      "missing_affiliate_opportunities": [list from KG not utilized],
+      "cta_audit": {count, placement_quality, copy_quality},
+      "required_changes": [list if pass=false],
+      "estimated_monthly_revenue_potential": string,
+      "kg_programs_referenced": [list]
+    }
+  agent: monetization_auditor
+  context:
+    - check_content_quality
+
+review_seo_and_ux:
+  description: >
+    Review the article for SEO and UX quality: {article_draft}
+      
+    FIRST, query the Target Blog Knowledge Graph for:
+    - UX and layout patterns: scope /target_blog/ux_and_layout
+    - Competitor content structures: scope /target_blog/competitor_intel
+    - Trending UI patterns and CTA placements
+      
+    Evaluate:
+    - H1/H2/H3 structure vs. ideal blueprint
+    - Primary keyword in H1, first 100 words, and naturally throughout
+    - Meta description (150-160 chars, includes keyword, compelling CTA)
+    - Internal linking placeholders present
+    - Image alt text requirements noted
+    - Schema markup type identified (Article, FAQ, HowTo, Review)
+    - Table of contents for articles >1500 words
+    - Mobile reading experience (short paragraphs, bullet points)
+    - Page speed considerations (no inline heavy scripts suggested)
+      
+    Threshold: seo_ux_score must be ≥7.5 to pass.
+  expected_output: >
+    JSON: {
+      "pass": true/false,
+      "seo_ux_score": float,
+      "heading_structure_score": float,
+      "keyword_optimization_score": float,
+      "schema_markup_recommendation": string,
+      "required_seo_fixes": [list if pass=false],
+      "ux_improvements": [list],
+      "kg_patterns_referenced": [list]
+    }
+  agent: seo_and_ux_reviewer
+  context:
+    - check_content_quality
+
+check_compliance:
+  description: >
+    Perform compliance review on: {article_draft}
+      
+    Check:
+    - FTC affiliate disclosure present and prominent (before first affiliate link)
+    - All product claims are accurate and verifiable (flag unverified superlatives)
+    - No fake urgency or deceptive scarcity claims
+    - GDPR-relevant content (cookie notices referenced if needed)
+    - No trademark violations or unauthorized use of brand names in misleading ways
+    - Author expertise claims are substantiated
+      
+    Any CRITICAL compliance failure causes an automatic FAIL and must be fixed
+    before publication regardless of other scores.
+  expected_output: >
+    JSON: {
+      "pass": true/false,
+      "critical_issues": [list of blockers],
+      "warnings": [list of non-blocking concerns],
+      "ftc_disclosure_present": true/false,
+      "fact_check_flags": [list of claims to verify]
+    }
+  agent: compliance_checker
+
+compile_editorial_verdict:
+  description: >
+    Compile the results from all four editor reviews:
+    - Content quality check: {check_content_quality}
+    - Monetization audit: {audit_monetization}
+    - SEO/UX review: {review_seo_and_ux}
+    - Compliance check: {check_compliance}
+      
+    Produce a final editorial verdict: APPROVED, REVISION_REQUIRED, or REJECTED.
+      
+    Rules:
+    - APPROVED: all four checks pass AND no critical compliance issues
+    - REVISION_REQUIRED: 1-2 checks fail but no critical compliance issues
+      → Return consolidated revision checklist ordered by priority
+    - REJECTED: critical compliance issues OR 3+ checks fail
+      → Return explanation and recommendation to restart from Stage 2
+      
+    Update the Target Blog Knowledge Graph with:
+    - Lessons learned from this review (scope: /target_blog/content_standards)
+    - Any new patterns observed that should inform future content
+  expected_output: >
+    JSON: {
+      "verdict": "APPROVED" | "REVISION_REQUIRED" | "REJECTED",
+      "composite_score": float,
+      "revision_checklist": [ordered list of required changes],
+      "approved_for_publication": true/false,
+      "kg_updates_made": [list of insights added to Knowledge Graph],
+      "article_id": string
+    }
+  agent: content_quality_editor
+  context:
+    - check_content_quality
+    - audit_monetization
+    - review_seo_and_ux
+    - check_compliance

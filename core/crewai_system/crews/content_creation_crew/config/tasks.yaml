@@ -1,0 +1,100 @@
+research_article_topic:
+  description: >
+    Research the specific topic {topic} in depth using real-time data. 
+    Conduct searches for: current trends, user questions, competing articles, 
+    and emerging angles on this topic. Identify the most valuable and unique 
+    angle to cover that will outperform existing content.
+    
+    Before researching, recall from the Target Blog Knowledge Graph:
+    - Trending topics and audience interests in {niche}
+    - Successful content patterns from competitor analysis
+    - Psychological triggers that work for this audience
+    
+    Use these insights to identify the optimal content angle.
+  expected_output: >
+    A research summary with:
+    - topic_analysis: {current_trends, user_questions, content_gaps, unique_angle}
+    - competitor_insights: {top_performing_articles, what_they_missing, our_edge}
+    - audience_insights: {pain_points, search_intent, content_preferences}
+  agent: author_agent
+
+draft_article_outline:
+  description: >
+    Create a detailed outline for the article on {topic} based on the research findings.
+    
+    Before outlining, recall from the Target Blog Knowledge Graph:
+    - The ideal writing style and psychological triggers for {niche}
+    - The target blog blueprint (article structure, word count targets)
+    - The top affiliate products to feature
+    - Content standards and quality benchmarks
+    
+    Structure the outline to include:
+    - Compelling hook and introduction (psychological engagement)
+    - Main content sections with value-driven subtopics
+    - Strategic placement for affiliate mentions and CTAs
+    - Conclusion with clear next steps
+    - Word count targets for each section
+  expected_output: >
+    A structured article outline with:
+    - title: optimized SEO title
+    - introduction: hook strategy and key points
+    - body_sections: list of {heading, word_count, key_points, affiliate_opportunities}
+    - conclusion: call_to_action and next_steps
+    - seo_elements: {primary_keyword, secondary_keywords, meta_description}
+  agent: author_agent
+  context:
+    - research_article_topic
+
+write_article_draft:
+  description: >
+    Write the complete article draft following the outline and incorporating all 
+    research insights from the Knowledge Graph.
+    
+    Use the ideal writing style identified in the KG: {writing_style}
+    Apply psychological triggers: {psychological_triggers}
+    Structure according to the target blog blueprint: {article_structure}
+    
+    Ensure the article provides genuine value first, then naturally integrates 
+    affiliate opportunities. Write conversationally, establish trust, and focus 
+    on solving reader problems before introducing solutions.
+    
+    Target word count: {target_word_count}
+    Include placeholder markers for affiliate links and CTAs to be added by 
+    the monetization specialist.
+  expected_output: >
+    A complete article draft with:
+    - title: final article title
+    - content: full article text with affiliate placeholders
+    - word_count: actual word count
+    - seo_optimization: {keyword_usage, heading_structure, readability_score}
+  agent: author_agent
+  context:
+    - research_article_topic
+    - draft_article_outline
+
+integrate_monetization:
+  description: >
+    Review the article draft and integrate optimal affiliate monetization elements.
+    
+    Query the Target Blog Knowledge Graph for:
+    - Top affiliate programs and products for {niche}
+    - Affiliate placement best practices
+    - CTA effectiveness data
+    - Email capture strategies
+    
+    Integrate affiliate links and CTAs following these constraints:
+    - Never monetize before establishing trust (first 300 words minimum)
+    - Maximum 1 CTA per 250 words
+    - Use natural, value-first integration
+    - Include FTC disclosure at the top of the article
+    - Add email capture prompt in the conclusion
+    
+    Replace placeholders with actual affiliate links from the database.
+  expected_output: >
+    A monetized article ready for editorial review with:
+    - content: article with integrated affiliate links and CTAs
+    - monetization_summary: {affiliate_links_added, cta_count, email_capture_placed}
+    - compliance_check: {ftc_disclosure_present, trust_established_before_monetization}
+  agent: monetization_specialist
+  context:
+    - write_article_draft

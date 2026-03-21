@@ -19,6 +19,11 @@ class Config:
     WORDPRESS_USERNAME = os.getenv('WORDPRESS_USERNAME')
     WORDPRESS_PASSWORD = os.getenv('WORDPRESS_PASSWORD')
     
+    # CrewAI environment variables
+    TAVILY_API_KEY = os.getenv('TAVILY_API_KEY')
+    SERPER_API_KEY = os.getenv('SERPER_API_KEY')
+    CREWAI_STORAGE_DIR = os.getenv('CREWAI_STORAGE_DIR', './data/crewai_memory')
+    
     @classmethod
     def init_app(cls, app):
         print(f"Database will be created at: {cls.DB_PATH}")

@@ -1,0 +1,123 @@
+research_trending_topics:
+  description: >
+    Conduct real-time research on trending topics in the {niche} niche.
+    Use Tavily and Serper to search:
+    1. "trending {niche} topics {current_year}"
+    2. "{niche} most searched questions right now"
+    3. "what is trending in {niche} this month"
+    4. "{niche} emerging trends {current_year}"
+   
+    For each trend found, record: topic name, search volume estimate, trend
+    trajectory (rising/peaked/declining), best content format, target audience
+    psychographic profile, and monetization alignment.
+   
+    Save ALL findings to the Target Blog Knowledge Graph under
+    scope: /target_blog/trending_topics
+   
+    Also query the Knowledge Graph for past research on this niche to identify
+    what has changed since the last run.
+  expected_output: >
+    A structured JSON report with fields:
+    - top_10_trending_topics: list of {topic, trend_score, search_volume, format, monetization_fit}
+    - emerging_keywords: list of {keyword, intent, competition_level, estimated_cpc}
+    - audience_insights: {primary_psychographic, key_pain_points, buying_triggers}
+    - recommended_priority_topics: top 3 with reasoning
+  agent: niche_trend_researcher
+
+research_affiliate_opportunities:
+  description: >
+    Research the most lucrative affiliate opportunities in the {niche} niche.
+    Search for:
+    1. "best affiliate programs {niche} {current_year} highest commission"
+    2. "{niche} affiliate programs commission rates comparison"
+    3. "direct advertising {niche} blogs CPM rates {current_year}"
+    4. "{niche} products highest EPC affiliate"
+   
+    For each opportunity: program name, network, commission rate/structure,
+    cookie duration, conversion rate if available, EPC, payout frequency,
+    approval difficulty, best-performing products.
+   
+    Also research: which companies pay directly for ad placements on blogs
+    in this niche, typical CPM/CPC rates, and any exclusive high-paying programs.
+   
+    Save ALL findings to scope: /target_blog/affiliate_programs
+    and /target_blog/product_opportunities
+  expected_output: >
+    A structured JSON report with:
+    - top_affiliate_programs: list of {name, network, commission_rate, cookie_days,
+      avg_epc, products, approval_difficulty, notes}
+    - direct_advertising_opportunities: list of {company, contact, rate_type,
+      estimated_rate, requirements}
+    - recommended_primary_programs: top 3 with revenue projections
+    - product_opportunities: top 10 products to feature with revenue potential
+  agent: affiliate_opportunity_scout
+  context:
+    - research_trending_topics
+
+research_psychology_and_ux:
+  description: >
+    Research proven psychology tactics, writing styles, and UX patterns that
+    maximize revenue in the {niche} niche. Search for:
+    1. "highest converting blog layouts {niche} {current_year}"
+    2. "affiliate blog CTA placement best practices conversion rate"
+    3. "{niche} blog copywriting psychological triggers"
+    4. "trending blog UI design {current_year} high converting"
+    5. "email list building tactics {niche} best performing"
+    6. "social proof formats that convert blogs {niche}"
+   
+    Research marketing psychology principles specifically proven for this niche:
+    urgency/scarcity, social proof, authority signals, loss aversion,
+    identity-based positioning, before/after framing.
+   
+    Save ALL findings to scope: /target_blog/psychology
+    and /target_blog/ux_and_layout
+  expected_output: >
+    A structured JSON report with:
+    - proven_writing_styles: list of {style, description, best_for, example_structure}
+    - high_converting_ux_patterns: list of {pattern, placement, expected_lift, example}
+    - psychological_triggers: list of {trigger, implementation, evidence}
+    - email_capture_strategies: top 3 with opt-in rate benchmarks
+    - cta_templates: 5 proven CTA formats for this niche
+    - trending_blog_layouts: description of what is working now
+  agent: psychology_and_ux_researcher
+  context:
+    - research_trending_topics
+    - research_affiliate_opportunities
+
+analyze_top_competitors:
+  description: >
+    Identify and analyze the top 5 performing blogs in the {niche} niche.
+    Use Tavily to search "top {niche} blogs {current_year}" and FirecrawlScrape
+    to extract content structure, monetization elements, and UI patterns from
+    each blog's homepage and 2-3 sample articles.
+   
+    For each competitor document:
+    - Content structure (H1/H2/H3 patterns, word count, media usage)
+    - Affiliate products featured and placement strategy
+    - CTA design, copy, and placement
+    - Email capture mechanisms
+    - Internal linking structure
+    - Writing style and tone
+    - What they are doing WELL
+    - Identifiable CONTENT GAPS we can exploit
+   
+    Synthesize this into a "Target Blog Blueprint" — the composite ideal
+    blog based on what the best performers are doing.
+   
+    Save ALL findings to scope: /target_blog/competitor_intel
+    and /target_blog/content_standards
+  expected_output: >
+    A structured JSON report with:
+    - competitor_profiles: list of 5 {name, url, strengths, weaknesses, key_tactics}
+    - content_gaps: list of {gap_description, opportunity_score, recommended_approach}
+    - target_blog_blueprint: {
+        ideal_article_structure, ideal_word_count, ideal_cta_count,
+        ideal_affiliate_density, recommended_writing_tone,
+        must_have_sections, monetization_pattern
+      }
+    - differentiation_opportunities: top 5 ways to outperform competitors
+  agent: competitor_intelligence_agent
+  context:
+    - research_trending_topics
+    - research_affiliate_opportunities
+    - research_psychology_and_ux

@@ -1,0 +1,56 @@
+plan_content_calendar:
+  description: >
+    Query the Target Blog Knowledge Graph for trending topics and affiliate opportunities
+    to build a comprehensive content plan. Analyze the research findings stored in:
+    - /target_blog/trending_topics
+    - /target_blog/affiliate_programs
+    - /target_blog/product_opportunities
+    - /target_blog/audience_insights
+    
+    Create a 30-article content plan that includes:
+    - Article topics and titles
+    - Target keywords for each article
+    - Content types (review, comparison, guide, etc.)
+    - Affiliate product alignment for each article
+    - Publishing priority and rationale
+    - Estimated search volume and competition level
+    
+    The plan should balance trending opportunities with evergreen content
+    and optimize for affiliate revenue potential.
+  expected_output: >
+    A structured content plan containing:
+    - content_calendar: list of 30 articles with {topic, title, target_keywords, 
+      content_type, affiliate_products, priority, rationale, search_volume, competition}
+    - content_strategy_summary: {primary_focus, secondary_focus, 
+      trending_vs_evergreen_ratio, estimated_monthly_traffic, 
+      estimated_monthly_revenue}
+    - keyword_research_findings: {primary_keywords, secondary_keywords, 
+      long_tail_opportunities, keyword_gaps}
+  agent: content_strategy_director
+
+map_keywords_to_intent:
+  description: >
+    Take the content plan from the Content Strategy Director and enrich it with
+    detailed keyword research and search intent analysis. For each article in the plan:
+    
+    1. Validate search volumes and competition levels for target keywords
+    2. Identify the search intent behind each keyword (informational, commercial, 
+       transactional, navigational)
+    3. Suggest secondary and long-tail keyword variations
+    4. Map keywords to appropriate content formats and angles
+    5. Identify keyword clustering opportunities for internal linking
+    
+    Use SerperDevTool and TavilySearchTool to gather current search data and
+    validate keyword opportunities in real-time.
+  expected_output: >
+    An enhanced content plan with:
+    - enriched_articles: list of articles with {validated_keywords, search_intent, 
+      search_volume, competition_level, keyword_difficulty, suggested_title, 
+      meta_description, header_structure, internal_linking_opportunities}
+    - keyword_strategy_summary: {total_keywords_researched, 
+      high_value_keywords, intent_distribution, content_gaps_identified}
+    - seo_recommendations: {on_page_suggestions, technical_considerations, 
+      content_structure_guidelines}
+  agent: seo_and_search_intent_specialist
+  context:
+    - plan_content_calendar
