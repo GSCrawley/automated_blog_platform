@@ -86,7 +86,7 @@ def get_product(product_id):
     """Get a specific product."""
     try:
         from src.models.product import Product
-        
+
         product = Product.query.get_or_404(product_id)
         return jsonify({
             'success': True,
@@ -95,6 +95,63 @@ def get_product(product_id):
     except Exception as e:
         logger.error(f"Error fetching product: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@blog_bp.route('/products/<int:product_id>', methods=['PUT'])
+def update_product(product_id):
+    """Update a product."""
+    try:
+        from src.models.product import Product
+        from src.models.user import db
+
+        product = Product.query.get_or_404(product_id)
+        data = request.get_json()
+
+        # Update product fields
+        for field in ['name', 'description', 'category', 'price', 'currency',
+                      'trend_score', 'search_volume', 'competition_level',
+                      'source_url', 'image_url', 'niche_id']:
+            if field in data:
+                setattr(product, field, data[field])
+
+        # Handle JSON fields
+        if 'affiliate_programs' in data:
+            import json
+            product.affiliate_programs = json.dumps(data['affiliate_programs'])
+        if 'primary_keywords' in data:
+            import json
+            product.primary_keywords = json.dumps(data['primary_keywords'])
+        if 'secondary_keywords' in data:
+            import json
+            product.secondary_keywords = json.dumps(data['secondary_keywords'])
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'product': product.to_dict()
+        })
+    except Exception as e:
+        logger.error(f"Error updating product: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@blog_bp.route('/products/<int:product_id>', methods=['DELETE'])
+def delete_product(product_id):
+    """Delete a product."""
+    try:
+        from src.models.product import Product
+        from src.models.user import db
+
+        product = Product.query.get_or_404(product_id)
+        db.session.delete(product)
+        db.session.commit()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error deleting product: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 @blog_bp.route('/keyword-research', methods=['POST'])
 def keyword_research():
@@ -468,11 +525,10 @@ def delete_niche(niche_id):
         db.session.commit()
         
         return jsonify({'success': True})
-        
+
     except Exception as e:
         logger.error(f"Error deleting niche: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-<<<<<<< HEAD
 
 
 @blog_bp.route('/niches/<int:niche_id>/pipeline-status', methods=['GET'])
@@ -519,6 +575,3 @@ def run_niche_pipeline(niche_id):
     except Exception as e:
         logger.error(f"Error triggering pipeline: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
-=======
->>>>>>> ed918b5671b636d16ad433e0f66f54e811b8de0f

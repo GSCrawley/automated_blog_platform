@@ -272,11 +272,79 @@ class AgentManager:
     def send_message_to_agent(self, target_agent: str, message: Dict[str, Any]) -> bool:
         """Send a message to a specific agent via the message broker"""
         return self.message_broker.publish_message(f'agents.{target_agent}', message)
-    
+
     def broadcast_message(self, message: Dict[str, Any]) -> bool:
         """Broadcast a message to all agents"""
         return self.message_broker.publish_message('agents.global', message)
-    
+
+    def assign_agent_to_blog(self, agent_name: str, blog_instance_id: int) -> bool:
+        """Assign an agent to a blog instance via the orchestrator"""
+        try:
+            if 'orchestrator' not in self.agents:
+                self.logger.error("Orchestrator agent not available")
+                return False
+
+            assignment_data = {
+                'type': 'task_assignment',
+                'task_type': 'assign_agent_to_blog',
+                'agent_name': agent_name,
+                'blog_instance_id': blog_instance_id,
+                'assigned_by': 'system'
+            }
+
+            self.send_message_to_agent('orchestrator', assignment_data)
+            self.logger.info(f"Assigned agent {agent_name} to blog {blog_instance_id}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to assign agent to blog: {e}")
+            return False
+
+    def get_agent_tasks(self, agent_name: str) -> List[Dict[str, Any]]:
+        """Get tasks assigned to a specific agent"""
+        try:
+            # First check if agent exists
+            if agent_name not in self.agents:
+                return []
+
+            # Get tasks from the task queue for this agent
+            tasks = []
+            # Check message broker for pending tasks
+            try:
+                pending_tasks = self.message_broker.get_task_from_queue(f'agent_{agent_name}')
+                if pending_tasks:
+                    tasks.append(pending_tasks)
+            except:
+                pass
+
+            return tasks if isinstance(tasks, list) else []
+        except Exception as e:
+            self.logger.error(f"Failed to get agent tasks: {e}")
+            return []
+
+    def assign_task_to_agent(self, agent_name: str, task_data: Dict[str, Any]) -> bool:
+        """Assign a task to a specific agent"""
+        try:
+            if agent_name not in self.agents:
+                self.logger.error(f"Agent {agent_name} not found")
+                return False
+
+            message = {
+                'type': 'task_assignment',
+                'task_type': task_data.get('task_type'),
+                'task_data': task_data.get('task_data', {}),
+                'priority': task_data.get('priority', 5),
+                'blog_instance_id': task_data.get('blog_instance_id'),
+                'assigned_by': 'system',
+                'task_id': f"task_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+            }
+
+            self.send_message_to_agent(agent_name, message)
+            self.logger.info(f"Task assigned to agent {agent_name}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to assign task to agent: {e}")
+            return False
+
     def get_statistics(self) -> Dict[str, Any]:
         """Get manager statistics"""
         current_stats = self.stats.copy()
