@@ -827,3 +827,65 @@ def stop_agent_system():
     except Exception as e:
         logger.error(f"Error stopping agent system: {str(e)}")
         return jsonify({'error': 'Failed to stop agent system'}), 500
+
+
+# ── Editorial preview endpoints ───────────────────────────────────────────────
+
+@agent_bp.route('/agents/editorial/review/<int:article_id>', methods=['GET'])
+def get_editorial_review(article_id):
+    """Return the latest Editor Agent review for an article."""
+    try:
+        if hasattr(current_app, 'agent_manager') and current_app.agent_manager:
+            agents = current_app.agent_manager.agents
+            editorial = agents.get('editorial')
+            if editorial and editorial.review_log:
+                latest = editorial.review_log[-1]
+                return jsonify({'status': 'success', 'review': latest})
+
+        # Fallback: trigger a fresh review against the article in DB
+        if AGENT_MODELS_AVAILABLE:
+            try:
+                from src.models.product import Article
+                article = Article.query.get(article_id)
+                if article and hasattr(current_app, 'agent_manager') and current_app.agent_manager:
+                    editorial = current_app.agent_manager.agents.get('editorial')
+                    if editorial:
+                        result = editorial.execute_task({
+                            'task_type': 'layout_review',
+                            'article': {'id': article.id, 'title': article.title, 'content': article.content},
+                        })
+                        return jsonify({'status': 'success', 'review': result.get('review', {})})
+            except Exception as inner_e:
+                logger.warning(f"Could not run inline review: {inner_e}")
+
+        return jsonify({'status': 'no_review', 'review': None}), 200
+
+    except Exception as e:
+        logger.error(f"Error fetching editorial review: {e}")
+        return jsonify({'error': 'Failed to fetch editorial review'}), 500
+
+
+@agent_bp.route('/agents/editorial/review/<int:article_id>', methods=['POST'])
+def trigger_editorial_review(article_id):
+    """Trigger a fresh Editor Agent review for an article and return the result."""
+    try:
+        if AGENT_MODELS_AVAILABLE:
+            from src.models.product import Article
+            article = Article.query.get(article_id)
+            if not article:
+                return jsonify({'error': 'Article not found'}), 404
+
+            if hasattr(current_app, 'agent_manager') and current_app.agent_manager:
+                editorial = current_app.agent_manager.agents.get('editorial')
+                if editorial:
+                    result = editorial.execute_task({
+                        'task_type': 'layout_review',
+                        'article': {'id': article.id, 'title': article.title, 'content': article.content},
+                    })
+                    return jsonify({'status': 'success', 'review': result.get('review', {})})
+
+        return jsonify({'status': 'unavailable', 'review': None}), 200
+
+    except Exception as e:
+        logger.error(f"Error triggering editorial review: {e}")
+        return jsonify({'error': 'Failed to trigger editorial review'}), 500

@@ -75,6 +75,10 @@ export const blogApi = {
     method: 'POST',
     body: JSON.stringify(data),
   }),
+  getEditorReview: (articleId) => request(`/agents/editorial/review/${articleId}`),
+  triggerEditorReview: (articleId) => request(`/agents/editorial/review/${articleId}`, {
+    method: 'POST',
+  }),
   
   // WordPress endpoints removed in headless pivot
   

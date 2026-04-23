@@ -11,6 +11,8 @@ class EditorAgent(BaseAgent):
     def __init__(self, redis_host: str = 'localhost', redis_port: int = 6379):
         super().__init__("editorial", "editorial", redis_host, redis_port)
         self.review_log: List[Dict[str, Any]] = []
+        # Latest preview state — accessible via REST for the frontend preview panel
+        self.preview_state: Dict[str, Any] = {}
 
     def get_capabilities(self) -> List[str]:
         return [
@@ -55,10 +57,28 @@ class EditorAgent(BaseAgent):
         review = {
             'article': article.get('title', 'unnamed'),
             'scorecard': scorecard,
+            'next_steps': scorecard.pop('next_steps', []),
             'decision': decision,
             'reviewed_at': datetime.utcnow().isoformat(),
         }
         self.review_log.append(review)
+
+        # Keep latest review available for the preview panel
+        self.preview_state = {
+            'article_id': article.get('id'),
+            'review': review,
+        }
+
+        # Broadcast the updated preview state so any subscriber can react
+        try:
+            self.broker.publish('agents.preview', {
+                'type': 'preview_updated',
+                'agent': self.name,
+                'article_id': article.get('id'),
+                'review': review,
+            })
+        except Exception:
+            pass  # Redis may not be running; non-critical
 
         return {
             'status': 'success',

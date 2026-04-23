@@ -503,12 +503,17 @@ const NichesSimple = () => {
                   <tr key={niche.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-medium text-gray-900">{niche.name}</div>
-                      {niche.target_keywords && (
-                        <div className="text-sm text-gray-500">
-                          {niche.target_keywords.split(',').slice(0, 3).join(', ')}
-                          {niche.target_keywords.split(',').length > 3 && '...'}
-                        </div>
-                      )}
+                     {niche.target_keywords && (() => {
+                        const keywords = Array.isArray(niche.target_keywords)
+                         ? niche.target_keywords
+                         : niche.target_keywords.split(',');
+                      return (
+                          <div className="text-sm text-gray-500">
+                           {keywords.slice(0, 3).join(', ')}
+                            {keywords.length > 3 && '...'}
+                           </div>
+                        );
+                    })()}
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-gray-900 max-w-xs">

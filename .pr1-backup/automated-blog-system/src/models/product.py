@@ -25,7 +25,6 @@ class Product(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-
     def to_dict(self):
         """Convert product to dictionary."""
         return {
@@ -50,8 +49,7 @@ class Product(db.Model):
         }
     
     def __repr__(self):
-        
-        return f'<Product {self.name} (ID: {self.id})  >'
+        return f'<Product {self.name}>'
 
 class Article(db.Model):
     """Article model for storing generated content."""
@@ -67,9 +65,6 @@ class Article(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
     niche_id = db.Column(db.Integer, db.ForeignKey('niches.id'), nullable=True)
     wordpress_post_id = db.Column(db.Integer)
-    ghost_post_id = db.Column(db.String(64))
-    published_url = db.Column(db.String(500))
-    editorial_verdict = db.Column(db.String(20), default='PENDING')
     seo_score = db.Column(db.Float, default=0.0)
     readability_score = db.Column(db.Float, default=0.0)
     word_count = db.Column(db.Integer, default=0)
@@ -94,9 +89,6 @@ class Article(db.Model):
             'niche_id': self.niche_id,
             'niche_name': self.niche.name if self.niche else None,
             'wordpress_post_id': self.wordpress_post_id,
-            'ghost_post_id': self.ghost_post_id,
-            'published_url': self.published_url,
-            'editorial_verdict': self.editorial_verdict,
             'seo_score': self.seo_score,
             'readability_score': self.readability_score,
             'word_count': self.word_count,
@@ -104,25 +96,6 @@ class Article(db.Model):
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
     
-    def to_headless_contract(self):
-        """Return the article in the Headless Article Contract shape
-        consumed by GhostService.publish_article()."""
-        keywords = json.loads(self.keywords) if self.keywords else []
-        return {
-            "id": self.id,
-            "title": self.title,
-            # GhostService uses 'sections' if present, else falls back to 'content'.
-            "content": self.content,
-            "sections": [],
-            "summary": (self.meta_description or "")[:300],
-            "keywords": keywords,
-            "calls_to_action": [],
-            "meta": {
-                "meta_title": self.title,
-                "meta_description": self.meta_description,
-            },
-        }
-
     def __repr__(self):
         return f'<Article {self.title}>'
-   
+

@@ -92,14 +92,6 @@ def create_app():
     except Exception as e:
         print(f"❌ Error registering automation blueprint: {e}")
 
-    try:
-        from src.routes.publisher import publisher_bp
-        app.register_blueprint(publisher_bp, url_prefix='/api/publisher')
-        print("✅ Publisher blueprint registered successfully")
-    except Exception as e:
-        print(f"❌ Error registering publisher blueprint: {e}")
-
-
     # Serve React Frontend
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')

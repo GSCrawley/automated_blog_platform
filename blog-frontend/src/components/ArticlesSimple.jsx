@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { blogApi } from '@/services/api';
 
 const ArticlesSimple = () => {
@@ -566,6 +567,13 @@ const ArticlesSimple = () => {
                       {article.created_at ? new Date(article.created_at).toLocaleDateString() : 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <Link
+                        to={`/articles/${article.id}/editor`}
+                        className="text-purple-600 hover:text-purple-900 mr-3 font-medium"
+                        title="Open in visual editor with live preview"
+                      >
+                        👁 Preview &amp; Edit
+                      </Link>
                       <button
                         onClick={() => handleEdit(article)}
                         className="text-indigo-600 hover:text-indigo-900 mr-3"

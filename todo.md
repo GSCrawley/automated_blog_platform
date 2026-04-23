@@ -1,424 +1,151 @@
-# Automated Blog Platform - Development Todo
+# todo.md — Ordered build plan
 
-## Phase 1: Fix SQLite Database Issue 
-- [x] Check current database configuration
-- [x] Fix database path and permissions
-- [x] Test database connection
-- [x] Fix syntax errors in main.py
-- [x] Create missing model files
-- [x] Create missing route files
-- [x] Successfully start Flask server
-- [x] Create missing service files (trend_analyzer, content_generator, seo_optimizer, automation_scheduler)
+The order is deliberate. Each PR unblocks the next. Do not reorder without
+a reason written down. Numbered phases from the prior 17-phase plan are
+mapped to these PRs below; the prior plan is archived at
+`docs/implementation_plan.md`.
 
-## Phase 2: Complete Frontend-Backend Integration 
-- [x] Update Dashboard component API calls to localhost
-- [x] Fix Products component API integration
-- [x] Fix Articles component API integration
-- [x] Create GenerateArticle component
-- [x] Add Generate Article to navigation
-- [x] Fix remaining hardcoded API URLs
-- [x] Add missing PUT/DELETE endpoints for articles and products
-- [x] Create Analytics component
-- [x] Add missing routes (/generate, /analytics, /settings)
-- [x] Complete frontend-backend integration
+---
 
-## Phase 3: Test Backend API 
-- [x] Start Flask server
-- [x] Test API endpoints
-- [x] Verify OpenAI integration
+## PR #1 — Ghost Headless CMS publisher  ✅ SHIPPED
 
-## Phase 3.5: (Deprecated) WordPress Integration 
-- (All previous tasks completed historically; integration now removed in headless pivot)
-- Stub `wordpress_service.py` retained only to avoid breaking stale imports
-- Future publishing will use adapter pattern (WordPress may return as optional plugin)
+**Goal:** a generated Article can be pushed to Ghost via a single API call,
+and only passing articles get through.
 
-## Phase 4: Complete Frontend Integration 
-- [x] Connect frontend to backend
-- [x] Test data flow
-- [x] Fix any UI issues
+- [x] `services/ghost_service.py` with JWT auth + HTML serializer
+- [x] `routes/publisher.py` with `/health`, `/publish/<id>`, `/draft/<id>`
+- [x] `Article.ghost_post_id`, `published_url`, `editorial_verdict` columns
+- [x] `Article.to_headless_contract()`
+- [x] Publisher refuses when `editorial_verdict != 'PUBLISH'` (APE-71 fix)
+- [x] `scripts/migrate_add_ghost_columns.py` idempotent migration
+- [x] Unit tests (mocked) green + live-test scaffold behind `GHOST_LIVE_TEST=1`
+- [x] README / GOALS / RUN / todo docs refreshed
 
-## Phase 5: Multi-Niche System 
-- [x] Add niche selection to database
-- [x] Create niche management UI
-- [x] Update content generation for niches
+**Acceptance (shipped):** `pytest -q test_ghost_publisher.py -k "not live"`
+returns 3 passed.
 
-## Phase 6: CRUD Functionality Verification and Enhancement ✅ COMPLETED
-- [x] **Fixed UI Rendering Issues**: Resolved shadcn/ui component problems by creating simplified components
-- [x] **Verify Articles CRUD functionality**
-  - [x] ArticlesSimple.jsx created and working
-  - [x] Article listing displays correctly (shows "Article List (0)")
-  - [x] API integration verified (/api/blog/articles working)
-  - [x] Search and filtering functionality implemented
-- [x] **Fix Products.jsx syntax errors and complete edit dialog**
-- [x] **Verify Products CRUD functionality**
-  - [x] ProductsSimple.jsx created and working
-  - [x] Product listing displays correctly (shows "Product List (1)" with Google Pixel Watch 3)
-  - [x] API integration verified (/api/blog/products working)
-  - [x] Search and filtering functionality implemented
-- [x] **Verify Niches CRUD functionality**
-  - [x] NichesSimple.jsx created and working
-  - [x] Niche listing displays correctly (shows "Niche List (1)" with Consumer Electronics)
-  - [x] API integration verified (/api/blog/niches working)
-  - [x] Search and filtering functionality implemented
-- [x] **Debug Original React Components UI Rendering**: Identified shadcn/ui rendering issues and implemented working solution
-- [ ] **Next Phase**: Implement actual CRUD operations (Create, Update, Delete) for all components
-- [ ] Implement comprehensive error handling for all CRUD operations
-- [ ] Add form validation for all create/edit operations
+---
 
-## Phase 8: CRUD Operations Implementation (Headless)
-- [ ] **Products CRUD Operations**
-  - [x] Implement Add Product form with validation
-  - [x] Implement Edit Product functionality
-  - [x] Implement Delete Product with confirmation
-  - [ ] Test end-to-end product workflows
-- [ ] **Articles CRUD Operations**
-  - [ ] Implement Add Article form (headless schema)
-  - [ ] Implement Edit Article functionality
-  - [ ] Implement Delete Article with confirmation
-  - [ ] Validate headless article JSON contract
-- [ ] **Niches CRUD Operations**
-  - [ ] Implement Add Niche form with scoring
-  - [ ] Implement Edit Niche functionality
-  - [ ] Implement Delete Niche with confirmation
-  - [ ] Test niche-product relationships
-- [ ] **Form Validation & Error Handling**
-  - [ ] Add comprehensive client-side validation
-  - [ ] Implement server-side error handling
-  - [ ] Add user-friendly error messages
-  - [ ] Test error scenarios and edge cases
+## PR #2 — Structured editor verdict + axis-scoped revision  🟡 NEXT
 
-## Phase 7: Multi-Agent Architecture Foundation ✅ COMPLETED 
-### 7.1 Replace Custom Agent Framework 
-- [x] Design base Agent class with:
-  - [x] Autonomous decision-making capabilities
-  - [x] Inter-agent communication protocol
-  - [x] State management and memory
-  - [x] Tool integration interface
-  - [x] Performance tracking
-- [x] Implement message broker for agent communication (Redis Pub/Sub)
-- [x] Create agent registry and lifecycle management
-- [x] Build agent monitoring dashboard (backend API ready)
+**Goal:** stop the "third-cycle QA rejection on the same axis" loop we saw
+in the Paperclip run (APE-68).
 
-### 7.2 Core Agent Types 
-- [x] **Orchestrator Agent** (Central Coordinator) 
-  - [x] Manages all blog instances
-  - [x] Coordinates agent assignments
-  - [x] Handles major decision approvals
-  - [x] Monitors system health
-  
-- [x] **Market Analytics Agent** 
-  - [x] Passive monitoring of existing products
-  - [x] Active periodic market research
-  - [x] Trend prediction algorithms
-  - [x] Competitive analysis
-  
-- [ ] **Content Strategy Agent** [Next Phase]
-  - [ ] Content planning based on trends
-  - [ ] SEO keyword optimization
-  - [ ] Content calendar management
-  - [ ] Performance-based content updates
-  
-- ~~WordPress Manager Agent (removed in headless pivot)~~
-  - (Replaced by future PublisherAdapter framework)
-  
-- [ ] **Monetization Agent** [Next Phase]
-  - [ ] Affiliate program management
-  - [ ] Ad placement optimization
-  - [ ] Sponsorship opportunity identification
-  - [ ] Revenue tracking and optimization
-  
-- [ ] **Performance Analytics Agent** [Next Phase]
-  - [ ] Real-time metrics monitoring
-  - [ ] KPI tracking and reporting
-  - [ ] Anomaly detection
-  - [ ] Growth opportunity identification
+- [ ] EditorCrew returns:
+      `{verdict, blocking_axes[], required_changes_by_axis{}, retry_budget_remaining}`
+- [ ] BlogCreationFlow revision path reads `blocking_axes` and re-invokes
+      *only* the responsible crew (Monetization Specialist for monetization,
+      SEO Specialist for SEO/UX, etc.).
+- [ ] Monetization Auditor returns a checklist
+      (anchor density, offer relevance, placement, disclosure) with per-item
+      pass/fail, not a single score.
+- [ ] ThirdCycleResolver — deterministic policy:
+      - if `blocking_axis == "monetization"` and `retry_budget_remaining == 0`
+        → swap affiliate offer and restart Stage 1, OR retire if product EPC
+        is below threshold.
+      - else → retire article, log postmortem.
+- [ ] `EditorCrew` writes `editorial_verdict` on the Article row
+      (unlocks the Publisher from PR #1).
+- [ ] Tests: a verdict=REVISE on monetization only triggers the
+      Monetization crew, not Content or SEO.
 
-### 7.3 Agent Communication & Decision Framework 
-- [x] Implement event-driven architecture
-- [x] Create decision tree for autonomous vs approval-required actions
-- [x] Build approval queue system
-- [x] Design rollback mechanisms for agent actions
+**Acceptance:** a rigged test article with a deliberately weak affiliate
+offer routes through two monetization-only revisions, then ThirdCycleResolver
+retires it — no human intervention, total cost logged.
 
-### **Phase 7 SUCCESS SUMMARY:**
-- ✅ **2 core agents running: Orchestrator + Market Analytics**
-- ✅ **Agent API endpoints functional**
-- ✅ **System health monitoring active**
-- ✅ **Frontend integration ready**
+---
 
-**API Test Results:**
-```json
-{
-  "active_agents": 2,
-  "agent_manager_available": true,
-  "overall_status": "healthy"
-}
-```
+## PR #3 — Durable pipeline state + resumability + budget breaker  ⬜
 
-## Phase 7.5: Frontend Agent Integration [Current Priority]
+**Goal:** prevent the "agents in error state after restart" and
+"credit balance too low" failure modes. Introduce Alembic.
 
-### 7.5.1 Agent Dashboard Integration
-- [ ] Connect React frontend to agent API endpoints
-- [ ] Build AgentMonitor component integration
-- [ ] Test real-time agent status updates
-- [ ] Implement agent control buttons (start/stop agents)
+- [ ] Add `flask-migrate` + `alembic` to requirements; bootstrap
+      `automated-blog-system/migrations/`.
+- [ ] New columns on `Article`: `current_stage`, `stage_status`,
+      `attempts`, `cost_usd`, `cost_budget_usd`, `last_error`.
+- [ ] `BlogCreationFlow` persists state on every stage transition.
+- [ ] `BlogCreationFlow.resume(article_id)` — picks up mid-flight articles.
+- [ ] `before_stage` hook: if `cost_usd > cost_budget_usd`, halt the
+      article (not the process), log a postmortem row.
+- [ ] Stage handoff by DB record only; remove any filesystem-path handoffs.
+- [ ] Drop `wordpress_post_id` column in the same migration.
+- [ ] Convert `migrate_add_ghost_columns.py` to a no-op that points at
+      Alembic.
+- [ ] Tests: kill the process mid-flow, restart, verify resume works and
+      no duplicate API calls occur.
 
-### 7.5.2 Agent Task Management UI
-- [ ] Create task assignment interface
-- [ ] Build decision approval workflow UI
-- [ ] Implement agent performance monitoring dashboard
-- [ ] Add agent communication logs viewer
+**Acceptance:** a forced process crash during Stage 2 resumes cleanly from
+Stage 2 on restart, with cost tallied and the budget breaker intact.
 
-### 7.5.3 Market Analytics Dashboard
-- [ ] Display market research results in UI
-- [ ] Show trending products from agent analysis
-- [ ] Implement competitive analysis visualization
-- [ ] Add market insights reporting
+---
 
-### 7.5.4 System Health Monitoring
-- [ ] Create system health dashboard
-- [ ] Implement real-time status indicators
-- [ ] Add agent performance metrics display
-- [ ] Build system alerts and notifications
+## PR #4 — Article CRUD completion + minimal approval UI  ⬜
 
-## Phase 8: Advanced Market Analytics System
+**Goal:** a human can drive an article from generated → published to Ghost
+through the React dashboard alone.
 
-### 8.1 Web Scraping Infrastructure
-- [ ] Set up Playwright/Puppeteer cluster for scalable scraping
-- [ ] Implement rotating proxy system
-- [ ] Create scraper modules for:
-  - [ ] Amazon (product trends, reviews, pricing)
-  - [ ] Google Shopping
-  - [ ] Social media platforms (trend detection)
-  - [ ] Competitor blogs
-  - [ ] Affiliate network dashboards
-- [ ] Build anti-detection mechanisms
-- [ ] Implement rate limiting and respectful crawling
+- [ ] Finish create/update/delete on Article, Niche, Product in
+      `routes/blog.py`.
+- [ ] React: Articles list shows `editorial_verdict`, `current_stage`,
+      `cost_usd`, `published_url`.
+- [ ] Two buttons per article:
+      `[Publish to Ghost]` (calls `/api/publisher/publish/<id>`)
+      `[Retry Monetization]` (calls new `/api/flow/retry?axis=monetization`)
+- [ ] Publish button disabled unless `editorial_verdict == 'PUBLISH'`.
+- [ ] Tiny end-to-end script: generate → pass QA → click Publish → URL
+      appears on the row.
 
-### 8.2 Data Processing Pipeline
-- [ ] Real-time data ingestion system
-- [ ] Data cleaning and normalization
-- [ ] Trend analysis algorithms
-- [ ] Predictive modeling for future trends
-- [ ] Market sentiment analysis
-- [ ] Competition heat mapping
+**Acceptance:** full round trip from React dashboard produces a live Ghost
+URL; no CLI/curl needed.
 
-### 8.3 Google Trends Integration
-- [ ] Set up Google Cloud API
-- [ ] Create trend tracking system
-- [ ] Cross-reference with scraped data
-- [ ] Build trend visualization dashboard
+---
 
-## Phase 9: Knowledge Base & RAG Pipeline
+## PR #5 — LanceDB embedding-backed retrieval  ⬜
 
-### 9.1 Knowledge Base Foundations
-- [x] Create `src/services/knowledge_base.py` loader
-- [x] Draft ontology doc `docs/knowledge_architecture.md` (Category > Lever > Tactic)
-- [ ] Expand ontology (add intents/entities mapping + 12 tactic JSON records)
-- [ ] Ingest seed docs with metadata parsing (category, lever, applies_to)
-- [ ] Build embedding index (model selection + storage format)
-- [ ] Implement hybrid retrieval (keyword + vector fusion)
+**Goal:** replace the naive token-overlap retrieval in `knowledge_base.py`
+with real semantic search. Biggest single quality lever.
 
-### 9.2 RAG Content Generation
-- [ ] Draft prompt templates (outline, draft, optimize)
-- [ ] Add retrieval hook to content generator (filter by agent + category)
-- [ ] Add semantic coverage scoring service
-- [ ] Add hallucination guardrails (source citation requirement)
+- [ ] `services/knowledge_base.py` uses LanceDB with
+      `text-embedding-3-small`.
+- [ ] Ingestion reindexes `docs/` on startup; dynamic harvest rows indexed
+      incrementally.
+- [ ] Query surface: `retrieve(query, k=8, agent_filter=None)` returns
+      scored chunks with source URLs.
+- [ ] ResearchCrew and EditorCrew both consume it.
+- [ ] Benchmarks: a 20-query eval set measuring before/after retrieval
+      relevance.
 
-### 9.3 Feedback & Iteration Loop
-- [ ] Define metrics: topical coverage, semantic density, entity recall
-- [ ] Store generation metadata for later optimization
-- [ ] Implement improvement suggestion agent task
+**Acceptance:** eval set top-3 relevance improves by a measurable margin
+over token-overlap baseline; EditorCrew rejection rate on a fixed
+regression set drops.
 
-### 9.4 Agent Rulebooks (New)
-- [x] Add initial rulebooks (Content Strategy, Monetization, Performance Analytics)
-- [ ] Add rulebook driven validation hooks (pre-generation & post-analysis)
+---
 
-## Phase 10: Multi-Blog Management System (Headless)
+## After PR #5 — revenue loop + scale
 
-### 10.1 Blog Instance Management
-- [ ] Blog instance registry
-- [ ] Resource allocation per blog
-- [ ] Performance monitoring per instance
-- [ ] Automated scaling based on performance
+Only start once one blog is live and earning. Candidate next areas:
 
-### 10.2 Central Coordination Dashboard
-- [ ] Unified dashboard for all blogs
-- [ ] Cross-blog analytics
-- [ ] Resource usage monitoring
-- [ ] Profit/loss tracking per blog
-- [ ] Agent assignment interface
+- Multi-niche orchestration + per-niche editorial calibration
+- Ghost newsletter/member flows for subscriber KPIs
+- GSC + affiliate dashboard ingestion → Performance Analytics Agent
+- Multi-blog management (headless fan-out)
+- SaaS multi-tenant transformation
+- TikTok / Instagram / YouTube repurposing
 
-### 10.3 Blog Creation Workflow
-- [ ] Automated WordPress installation
-- [ ] Domain management integration
-- [ ] SSL certificate automation
-- [ ] Initial content seeding
-- [ ] Agent assignment and configuration
+---
 
-## Phase 11: Notification & Approval System
+## Mapping to the prior 17-phase plan
 
-### 11.1 Email Alert System
-- [ ] SendGrid/AWS SES integration
-- [ ] Customizable alert templates
-- [ ] Priority-based notifications
-- [ ] Digest options for non-critical updates
-
-### 11.2 Decision Approval Interface
-- [ ] Web-based approval dashboard
-- [ ] Mobile-responsive design
-- [ ] One-click approve/reject
-- [ ] Decision history tracking
-- [ ] Bulk approval capabilities
-
-### 11.3 Major Change Detection
-- [ ] Define thresholds for major changes
-- [ ] Implement change impact analysis
-- [ ] Create rollback mechanisms
-- [ ] A/B testing for major changes
-
-## Phase 12: Performance Optimization & Learning
-
-### 12.1 Machine Learning Integration
-- [ ] Implement reinforcement learning for agent decisions
-- [ ] Create feedback loops from performance metrics
-- [ ] Build recommendation engine for products
-- [ ] Develop content performance prediction
-
-### 12.2 A/B Testing Framework
-- [ ] Content variation testing
-- [ ] Layout optimization
-- [ ] Monetization strategy testing
-- [ ] Automated winner selection
-
-### 12.3 Self-Improvement Mechanisms
-- [ ] Agent performance scoring
-- [ ] Automated strategy adjustments
-- [ ] Knowledge base updates
-- [ ] Cross-blog learning
-
-## Phase 13: SEO Tools Integration (Headless Oriented)
-
-### 13.1 Free SEO Tools Implementation
-- [ ] Google Keyword Planner Integration
-- [ ] SERP Analysis implementation
-- [ ] NLP Keyword Analysis tools
-- [ ] Content Optimization without paid APIs
-
-### 13.2 SEO Service Interface
-- [ ] Implement comprehensive SEO Service interface
-- [ ] Create keyword research functionality
-- [ ] Build content plan generation
-- [ ] Develop content optimization tools
-- [ ] Implement meta tag generation
-- [ ] Add URL analysis capability
-
-## Phase 14: Advanced Features
-
-### 14.1 Passive/Active Analytics Hybrid
-- [ ] Real-time monitoring dashboard
-- [ ] Scheduled deep analysis runs
-- [ ] Trend alert system
-- [ ] Competitive intelligence gathering
-
-### 14.2 Content Diversification
-- [ ] Video content integration (YouTube embeds)
-- [ ] Infographic generation
-- [ ] Podcast summaries
-- [ ] Interactive content (quizzes, calculators)
-
-### 14.3 Advanced Monetization
-- [ ] Dynamic pricing optimization
-- [ ] Seasonal campaign automation
-- [ ] Email list building
-- [ ] Retargeting pixel management
-
-## Phase 15: SaaS Transformation Preparation
-
-### 15.1 Legal Compliance Layer
-- [ ] Terms of service generator
-- [ ] Privacy policy automation
-- [ ] GDPR compliance tools
-- [ ] FTC disclosure automation
-
-### 15.2 Multi-Tenancy Architecture
-- [ ] User account system
-- [ ] Subscription management
-- [ ] Resource isolation
-- [ ] Usage tracking and billing
-
-### 15.3 Public API Development
-- [ ] RESTful API for third-party integrations
-- [ ] Webhook system
-- [ ] API documentation
-- [ ] Rate limiting
-
-## Phase 16: Testing & Quality Assurance
-
-### 16.1 Automated Testing Suite
-- [ ] Unit tests for all agents
-- [ ] Integration tests for workflows
-- [ ] Performance benchmarking
-- [ ] Security testing
-
-### 16.2 Monitoring & Logging
-- [ ] Centralized logging system
-- [ ] Error tracking (Sentry integration)
-- [ ] Performance monitoring
-- [ ] Uptime monitoring
-
-## Phase 17: Deployment & Scaling
-
-### 17.1 Infrastructure Setup
-- [ ] Containerization (Docker)
-- [ ] Kubernetes orchestration
-- [ ] Auto-scaling configuration
-- [ ] Load balancing
-
-### 17.2 Production Deployment
-- [ ] CI/CD pipeline
-- [ ] Blue-green deployment
-- [ ] Database migration strategy
-- [ ] Backup and disaster recovery
-
-## Implementation Priority Order (Revised Headless Roadmap):
-1. Finalize Phase 8 headless CRUD (Products, Articles, Niches)
-2. Phase 9 Knowledge Base + Retrieval Layer
-3. Phase 7 remaining agents (Content Strategy, Monetization, Performance) in parallel with KB
-4. Phase 10 Multi-Blog abstraction (after KB baseline)
-5. Phase 13 SEO tooling (feeds KB + optimization loops)
-6. Phase 12 Performance optimization / feedback instrumentation
-7. Later: SaaS (Phase 15) + Deployment hardening (Phases 16-17)
-
-## Migration Note (Legacy WordPress Columns)
-
-If a persistent DB still contains WordPress columns:
-
-- Article.wordpress_post_id
-- BlogInstance.wordpress_* fields
-
-Plan: introduce Alembic migrations later; for now manual adjustment or fresh DB recommended.
-
-## Documentation & Developer Experience ✅ COMPLETED
-- [x] **WARP.md Creation**: Created comprehensive WARP.md file with:
-  - [x] Essential development commands (setup, build, test)
-  - [x] System architecture overview (multi-agent system, headless pipeline)
-  - [x] Project structure patterns (backend, frontend, agent system)
-  - [x] Agent system development guidelines
-  - [x] API endpoints documentation
-  - [x] Configuration requirements and environment setup
-  - [x] Knowledge base integration patterns
-  - [x] Testing strategies (agent system, API, frontend)
-  - [x] Troubleshooting section
-- [x] **README.md Update**: Added reference to WARP.md for development quick start
-
-## Next Immediate Steps:
-1. (Task 2) Add Knowledge Base loader + ingestion pipeline
-2. (Task 3) Update README (DONE) & finalize headless article contract draft (IN README)
-3. (Task 1 - queued) Optionally remove `wordpress_service.py` stub after confirming no imports
-4. (Task 4 - queued) Scaffold `src/services/knowledge_base.py` + tests
-5. Add retrieval-enhanced generation path in content generator
-1. Complete Phase 6 CRUD verification tasks
-2. Create the base Agent class architecture
-3. Implement the Orchestrator Agent
-4. Set up the message broker (Redis)
-5. Build the Market Analytics Agent with basic scraping
+| Old phase                                        | Now lives in |
+|--------------------------------------------------|--------------|
+| Phase 8 — CRUD completion                        | PR #4        |
+| Phase 9 — Knowledge Base & RAG                   | PR #5        |
+| Phase 10 — Multi-blog management                 | post-PR#5    |
+| Phase 11 — Notification & approval system        | PR #4 (min)  |
+| Phase 12 — Perf optimization & learning          | post-PR#5    |
+| Phase 13 — SEO tools integration                 | post-PR#5    |
+| Phase 14 — Advanced features                     | post-PR#5    |
+| Phase 15 — SaaS transformation                   | post-revenue |
+| Phase 16 — Testing & QA                          | rolling, per-PR |
+| Phase 17 — Deployment & scaling                  | post-revenue |

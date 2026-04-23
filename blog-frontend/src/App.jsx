@@ -3,6 +3,7 @@ import Layout from './components/Layout'
 import Dashboard from './components/Dashboard'
 import ProductApproval from './components/ProductApproval'
 import ArticlesSimple from './components/ArticlesSimple'
+import ArticleEditor from './components/ArticleEditor'
 import NichesSimple from './components/NichesSimple'
 import Settings from './components/Settings'
 import ApiTest from './components/ApiTest'
@@ -13,18 +14,26 @@ import './App.css'
 function App() {
   return (
     <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/products" element={<ProductsSimple />} />
-          <Route path="/articles" element={<ArticlesSimple />} />
-          <Route path="/niches" element={<NichesSimple />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/api-test" element={<ApiTest />} />
-          <Route path="/product-approval" element={<ProductApproval />} />
-          <Route path="/analytics" element={<Analytics />} />
-        </Routes>
-      </Layout>
+      <Routes>
+        {/* Full-screen article editor — no Layout wrapper */}
+        <Route path="/articles/:id/editor" element={<ArticleEditor />} />
+
+        {/* All other routes share the Layout shell */}
+        <Route path="/*" element={
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/products" element={<ProductsSimple />} />
+              <Route path="/articles" element={<ArticlesSimple />} />
+              <Route path="/niches" element={<NichesSimple />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/api-test" element={<ApiTest />} />
+              <Route path="/product-approval" element={<ProductApproval />} />
+              <Route path="/analytics" element={<Analytics />} />
+            </Routes>
+          </Layout>
+        } />
+      </Routes>
     </Router>
   )
 }
