@@ -70,9 +70,6 @@ class Article(db.Model):
     ghost_post_id = db.Column(db.String(64))
     published_url = db.Column(db.String(500))
     editorial_verdict = db.Column(db.String(20), default='PENDING')
-    last_verdict_json = db.Column(db.Text)  # PR #2 — full EditorialVerdict; PR #3 replaces with editorial_reports table
-    blueprint_id = db.Column(db.String(64))  # PR #2 stub; PR #5a backs this with a real Blueprint row
-    current_stage = db.Column(db.String(40), default='stage_0')  # PR #2 sets 'awaiting_human_review' after review
     seo_score = db.Column(db.Float, default=0.0)
     readability_score = db.Column(db.Float, default=0.0)
     word_count = db.Column(db.Integer, default=0)
@@ -100,9 +97,6 @@ class Article(db.Model):
             'ghost_post_id': self.ghost_post_id,
             'published_url': self.published_url,
             'editorial_verdict': self.editorial_verdict,
-            'last_verdict_json': self.last_verdict_json,
-            'blueprint_id': self.blueprint_id,
-            'current_stage': self.current_stage,
             'seo_score': self.seo_score,
             'readability_score': self.readability_score,
             'word_count': self.word_count,

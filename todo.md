@@ -1,151 +1,177 @@
 # todo.md — Ordered build plan
 
-The order is deliberate. Each PR unblocks the next. Do not reorder without
-a reason written down. Numbered phases from the prior 17-phase plan are
-mapped to these PRs below; the prior plan is archived at
-`docs/implementation_plan.md`.
+The order is deliberate. Each PR unblocks the next. Detailed scope and
+acceptance tests for PRs #2–#7 live in [`PRs_2_through_7.md`](PRs_2_through_7.md).
+Do not reorder without writing down a reason.
+
+The system's moat is the **Pattern Library + Performance Feedback Loop**, not
+the prose-writing ability of any one agent. PR #2 is verdict plumbing; PR #5a
+is where the agents start being genuinely smart; PR #7 is where the system
+starts compounding.
 
 ---
 
 ## PR #1 — Ghost Headless CMS publisher  ✅ SHIPPED
 
-**Goal:** a generated Article can be pushed to Ghost via a single API call,
-and only passing articles get through.
-
-- [x] `services/ghost_service.py` with JWT auth + HTML serializer
-- [x] `routes/publisher.py` with `/health`, `/publish/<id>`, `/draft/<id>`
-- [x] `Article.ghost_post_id`, `published_url`, `editorial_verdict` columns
-- [x] `Article.to_headless_contract()`
-- [x] Publisher refuses when `editorial_verdict != 'PUBLISH'` (APE-71 fix)
-- [x] `scripts/migrate_add_ghost_columns.py` idempotent migration
-- [x] Unit tests (mocked) green + live-test scaffold behind `GHOST_LIVE_TEST=1`
-- [x] README / GOALS / RUN / todo docs refreshed
-
-**Acceptance (shipped):** `pytest -q test_ghost_publisher.py -k "not live"`
-returns 3 passed.
+- [x] `services/ghost_service.py` (JWT auth + HTML serializer)
+- [x] `routes/publisher.py` (`/health`, `/publish/<id>`, `/draft/<id>`)
+- [x] Article Ghost columns + `to_headless_contract()`
+- [x] Publisher refuses unless `editorial_verdict == "PUBLISH"`
+- [x] One-shot `migrate_add_ghost_columns.py`
+- [x] `pytest -q test_ghost_publisher.py -k "not live"` — 3 passed
 
 ---
 
-## PR #2 — Structured editor verdict + axis-scoped revision  🟡 NEXT
+## PR #2 — Structured EditorialVerdict + Blueprint stub  ✅ SHIPPED
 
-**Goal:** stop the "third-cycle QA rejection on the same axis" loop we saw
-in the Paperclip run (APE-68).
+**Goal:** the Editor stops grading prose and starts grading conformance to a
+target Blueprint. Verdict is binary; every article ends at
+`awaiting_human_review`.
 
-- [ ] EditorCrew returns:
-      `{verdict, blocking_axes[], required_changes_by_axis{}, retry_budget_remaining}`
-- [ ] BlogCreationFlow revision path reads `blocking_axes` and re-invokes
-      *only* the responsible crew (Monetization Specialist for monetization,
-      SEO Specialist for SEO/UX, etc.).
-- [ ] Monetization Auditor returns a checklist
-      (anchor density, offer relevance, placement, disclosure) with per-item
-      pass/fail, not a single score.
-- [ ] ThirdCycleResolver — deterministic policy:
-      - if `blocking_axis == "monetization"` and `retry_budget_remaining == 0`
-        → swap affiliate offer and restart Stage 1, OR retire if product EPC
-        is below threshold.
-      - else → retire article, log postmortem.
-- [ ] `EditorCrew` writes `editorial_verdict` on the Article row
-      (unlocks the Publisher from PR #1).
-- [ ] Tests: a verdict=REVISE on monetization only triggers the
-      Monetization crew, not Content or SEO.
+- [x] `core/crewai_system/contracts/editorial_verdict.py` — `AxisReport`,
+      `EditorialVerdict`, lossless JSON round-trip.
+- [x] `core/crewai_system/contracts/blueprint.py` — `Blueprint` dataclass +
+      `load_stub_blueprint(niche_name)` (replaced by PR #5a).
+- [x] `core/crewai_system/crews/editor_crew/axes.py` — four axis evaluators:
+      Conformance + Monetization deterministic; ContentQuality + Compliance
+      LLM-injectable with pass-stub default (no network in unit tests).
+- [x] `core/crewai_system/crews/editor_crew/editor_crew.py` rewritten as a
+      pure-Python orchestrator (CrewAI dropped from the editor; legacy crew
+      preserved at `.pr2-backup/`).
+- [x] `automated-blog-system/src/services/editorial_review.py` —
+      `run_editorial_review(article_id)` loads Article, runs review, persists
+      verdict + report JSON, sets `current_stage = "awaiting_human_review"`.
+- [x] `Article` columns added: `last_verdict_json`, `blueprint_id`,
+      `current_stage`. Idempotent migration:
+      `scripts/migrate_add_verdict_columns.py`.
+- [x] `BlogCreationFlow` rewritten: revision router removed, terminal state is
+      `awaiting_human_review` regardless of verdict.
+- [x] `test_editor_verdict.py` — 6 tests covering schema round-trip,
+      Conformance determinism, PUBLISH/REJECT gates, terminal-state, and a
+      direct EditorCrew sanity check.
 
-**Acceptance:** a rigged test article with a deliberately weak affiliate
-offer routes through two monetization-only revisions, then ThirdCycleResolver
-retires it — no human intervention, total cost logged.
+**Acceptance:**
+`pytest -q test_editor_verdict.py && pytest -q test_ghost_publisher.py -k "not live"`
+→ 9 passed.
 
 ---
 
-## PR #3 — Durable pipeline state + resumability + budget breaker  ⬜
+## PR #3 — Cost metering + stage observability + Alembic  ⬜
 
-**Goal:** prevent the "agents in error state after restart" and
-"credit balance too low" failure modes. Introduce Alembic.
+**Goal:** know what each article costs in dollars per stage, persist every
+stage's output, and stop one-shot migration scripts.
 
-- [ ] Add `flask-migrate` + `alembic` to requirements; bootstrap
+- [ ] Add `Flask-Migrate` + `alembic` to requirements; bootstrap
       `automated-blog-system/migrations/`.
-- [ ] New columns on `Article`: `current_stage`, `stage_status`,
-      `attempts`, `cost_usd`, `cost_budget_usd`, `last_error`.
-- [ ] `BlogCreationFlow` persists state on every stage transition.
-- [ ] `BlogCreationFlow.resume(article_id)` — picks up mid-flight articles.
-- [ ] `before_stage` hook: if `cost_usd > cost_budget_usd`, halt the
-      article (not the process), log a postmortem row.
-- [ ] Stage handoff by DB record only; remove any filesystem-path handoffs.
-- [ ] Drop `wordpress_post_id` column in the same migration.
-- [ ] Convert `migrate_add_ghost_columns.py` to a no-op that points at
-      Alembic.
-- [ ] Tests: kill the process mid-flow, restart, verify resume works and
-      no duplicate API calls occur.
-
-**Acceptance:** a forced process crash during Stage 2 resumes cleanly from
-Stage 2 on restart, with cost tallied and the budget breaker intact.
-
----
-
-## PR #4 — Article CRUD completion + minimal approval UI  ⬜
-
-**Goal:** a human can drive an article from generated → published to Ghost
-through the React dashboard alone.
-
-- [ ] Finish create/update/delete on Article, Niche, Product in
-      `routes/blog.py`.
-- [ ] React: Articles list shows `editorial_verdict`, `current_stage`,
-      `cost_usd`, `published_url`.
-- [ ] Two buttons per article:
-      `[Publish to Ghost]` (calls `/api/publisher/publish/<id>`)
-      `[Retry Monetization]` (calls new `/api/flow/retry?axis=monetization`)
-- [ ] Publish button disabled unless `editorial_verdict == 'PUBLISH'`.
-- [ ] Tiny end-to-end script: generate → pass QA → click Publish → URL
-      appears on the row.
-
-**Acceptance:** full round trip from React dashboard produces a live Ghost
-URL; no CLI/curl needed.
+- [ ] Baseline migration matching current schema (incl. PR #1 + PR #2
+      columns).
+- [ ] `services/cost_meter.py` + `model_rates.py` writing to a `cost_events`
+      table; per-article + per-month roll-ups.
+- [ ] Per-article budget halt (`Article.cost_budget_usd`) and monthly cap
+      from `GOALS.md` ($100) backed by a `budgets` table.
+- [ ] Stage output JSON columns persisted (`research_report_json`,
+      `strategy_json`, `draft_sections_json`, `monetization_map_json`).
+      `editorial_reports` table replaces `last_verdict_json`.
+- [ ] Drop `wordpress_post_id` in the same migration.
+- [ ] Convert `migrate_add_ghost_columns.py` and
+      `migrate_add_verdict_columns.py` to no-op shims pointing at Alembic.
+- [ ] `test_observability.py` — Alembic round-trip, cost metering,
+      budget halt, monthly cap refusal, stage outputs persisted.
 
 ---
 
-## PR #5 — LanceDB embedding-backed retrieval  ⬜
+## PR #4 — CRUD completion + dashboard with cost/verdict visibility  ⬜
 
-**Goal:** replace the naive token-overlap retrieval in `knowledge_base.py`
-with real semantic search. Biggest single quality lever.
-
-- [ ] `services/knowledge_base.py` uses LanceDB with
-      `text-embedding-3-small`.
-- [ ] Ingestion reindexes `docs/` on startup; dynamic harvest rows indexed
-      incrementally.
-- [ ] Query surface: `retrieve(query, k=8, agent_filter=None)` returns
-      scored chunks with source URLs.
-- [ ] ResearchCrew and EditorCrew both consume it.
-- [ ] Benchmarks: a 20-query eval set measuring before/after retrieval
-      relevance.
-
-**Acceptance:** eval set top-3 relevance improves by a measurable margin
-over token-overlap baseline; EditorCrew rejection rate on a fixed
-regression set drops.
+- [ ] Backend: complete POST/PUT/PATCH/DELETE on Article/Niche/Product;
+      soft-delete; filter by `status`/`editorial_verdict`/`current_stage`/
+      `niche_id`; `GET /api/articles/<id>/stage-outputs`.
+- [ ] Frontend: Dashboard counts by stage + verdict; monthly cost vs cap bar;
+      `awaiting_human_review` queue; ArticlesSimple shows new columns;
+      ArticleDetail tabs for research/strategy/draft/monetization/verdict.
+- [ ] No inline editing yet — that's PR #6.
+- [ ] `test_article_crud.py` mandatory; frontend RTL or QA checklist.
 
 ---
 
-## After PR #5 — revenue loop + scale
+## (User task) Stand up Ghost  ⬜
 
-Only start once one blog is live and earning. Candidate next areas:
-
-- Multi-niche orchestration + per-niche editorial calibration
-- Ghost newsletter/member flows for subscriber KPIs
-- GSC + affiliate dashboard ingestion → Performance Analytics Agent
-- Multi-blog management (headless fan-out)
-- SaaS multi-tenant transformation
-- TikTok / Instagram / YouTube repurposing
+Ghost on the Hostinger VPS via docker-compose alongside Paperclip's traefik,
+or Ghost Pro at ~$9/mo. Set `GHOST_API_URL` + `GHOST_ADMIN_KEY`. Run
+`pytest -q test_ghost_publisher.py -k live` to verify.
 
 ---
 
-## Mapping to the prior 17-phase plan
+## PR #5a — SERP Forensics + Pattern Library  ⬜
 
-| Old phase                                        | Now lives in |
-|--------------------------------------------------|--------------|
-| Phase 8 — CRUD completion                        | PR #4        |
-| Phase 9 — Knowledge Base & RAG                   | PR #5        |
-| Phase 10 — Multi-blog management                 | post-PR#5    |
-| Phase 11 — Notification & approval system        | PR #4 (min)  |
-| Phase 12 — Perf optimization & learning          | post-PR#5    |
-| Phase 13 — SEO tools integration                 | post-PR#5    |
-| Phase 14 — Advanced features                     | post-PR#5    |
-| Phase 15 — SaaS transformation                   | post-revenue |
-| Phase 16 — Testing & QA                          | rolling, per-PR |
-| Phase 17 — Deployment & scaling                  | post-revenue |
+**The big one — this is where the agents become smart.**
+
+- [ ] `services/serp_forensics.py` — Serper SERP pull, Firecrawl profile
+      extraction, aggregator with confidence tiers, gap identification.
+- [ ] `blueprints` + `serp_profiles` tables (Alembic).
+- [ ] Stage 0.5 — Blueprint Selection — between Research and Strategy.
+- [ ] Stub blueprint loader from PR #2 replaced with Pattern-Library lookup.
+- [ ] Freshness policy (default 30 days, niche-overridable).
+- [ ] `test_serp_forensics.py` — deterministic profile extraction, expected
+      confidence tiers, gap identification, Blueprint persistence,
+      Stage 0.5 integration.
+
+---
+
+## PR #5b — LanceDB retrieval unification  ⬜
+
+- [ ] `services/retrieval.py` — single `retrieve(query, collection, k, filters)`
+      surface backed by LanceDB + BM25 hybrid.
+- [ ] Collections: `docs`, `profiles`, `research_harvest`, `own_articles`.
+- [ ] Remove naive token-overlap retrieval from `knowledge_base.py`.
+- [ ] `eval/retrieval_eval.py` — 20-query nDCG@8 / Recall@8 vs baseline.
+      If retrieval doesn't beat baseline, stop and ask before merging.
+
+---
+
+## PR #6 — Human-in-the-loop review + publish UI  ⬜
+
+- [ ] `routes/review.py` — queue, get, PATCH, publish, unpublish, ghost-fetch,
+      pull-from-ghost, push-to-ghost.
+- [ ] `GhostService.fetch_post()` + `set_status()`.
+- [ ] `article_revisions` table for snapshots before pull/push.
+- [ ] React: `ArticleReview.jsx` (Tiptap + Sections + CTAs + SEO tabs +
+      Editorial Report + Blueprint Conformance + Ghost Preview iframe);
+      `PublishedArticles.jsx` with drift indicators and side-by-side diff.
+- [ ] Per-article in-process lock (`threading.Lock`).
+- [ ] `test_review_routes.py` + frontend RTL flows + a documented manual E2E.
+- [ ] Grep guard test: `/api/publisher/publish/` only callable from
+      `routes/review.py` and `routes/publisher.py`.
+
+---
+
+## (User task) Publish 20+ articles  ⬜
+
+PR #7 needs at least ~20 published articles to have signal. Don't start it
+sooner.
+
+---
+
+## PR #7 — Performance Feedback Loop  ⬜
+
+**Where the system starts compounding.**
+
+- [ ] `services/analytics/gsc_provider.py` — daily GSC ingest into
+      `article_analytics_daily`.
+- [ ] `services/analytics/affiliate_provider.py` — Amazon Associates + one
+      other (user choice — surface as a question).
+- [ ] `article_performance` roll-up; `article_blueprint_snapshot` for audit.
+- [ ] `services/feedback_engine.py` — per-Blueprint-field effect sizes,
+      bootstrap CIs, min-n=10 gating; `BlueprintProposal` rows (never
+      auto-applied).
+- [ ] `FeedbackProposals.jsx` review screen; Dashboard ROI leaderboard.
+- [ ] `test_feedback_engine.py` — GSC ingest round-trip, tier assignment,
+      effect-size bounds, min-n gating, proposal lifecycle creates a new
+      Blueprint version on accept and retains the old one.
+
+---
+
+## After PR #7
+
+Multi-niche calibration, Ghost newsletter/member flows, multi-blog fan-out,
+SaaS multi-tenant, social repurposing — only after the feedback loop has
+shown it actually moves the needle.
