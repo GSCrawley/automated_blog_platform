@@ -97,49 +97,16 @@ stage's output, and stop one-shot migration scripts.
 
 ---
 
-## PR #4 — CRUD completion + dashboard with cost/verdict visibility  ✅ SHIPPED
+## PR #4 — CRUD completion + dashboard with cost/verdict visibility  ⬜
 
-**Goal:** every PR-#3 column the system already writes becomes visible in
-the dashboard, and the API surface is rounded out with PATCH + filters +
-pagination + soft-delete + a stage-outputs read endpoint.
-
-- [x] `routes/blog.py` — `GET /articles` filters by `status`,
-      `editorial_verdict`, `current_stage`, `niche_id`; pagination via
-      `?limit` (cap 500) + `?offset`; archived rows hidden by default
-      (`?include_archived=1` opt-in); response carries `total`, `limit`,
-      `offset`.
-- [x] `PATCH` added to `/articles/<id>`, `/products/<id>`, `/niches/<id>`;
-      shares the PUT handler; only writes fields present in the body.
-- [x] `DELETE /articles/<id>` is now a soft-archive (sets
-      `status='archived'`); pass `?hard=1` for true delete.
-- [x] `GET /articles/<id>/stage-outputs` returns the four PR #3 stage JSON
-      columns parsed + cost / verdict / blueprint_id metadata.
-- [x] `GET /dashboard/stats` extended with `by_stage`, `by_verdict`,
-      `awaiting_review`, and a `cost` panel for the current month
-      (uses `CostMeter.current_month()`, exposed via PR #4).
-- [x] `blog-frontend/src/services/api.js` — JSDoc wrappers for every new
-      endpoint plus typedefs for `ArticleListFilters`, `StageOutputs`,
-      `DashboardStats`. New `budgetApi` and `publisherApi` namespaces.
-- [x] `Dashboard.jsx` rewritten: real-data stats only — counts by stage and
-      verdict, `awaiting_human_review` queue, monthly cost vs cap progress
-      bar. The previous mock "views/revenue" tiles were retired (PR #7
-      replaces them with real GSC + affiliate data).
-- [x] `ArticlesSimple.jsx` — added `Stage` / `Verdict` / `Cost` /
-      `Published` columns plus a "Details" link to the new view.
-- [x] `ArticleDetail.jsx` (new, route `/articles/:id`) — tabs for Research /
-      Strategy / Draft / Monetization / Editorial Report. Editorial Report
-      tab renders per-axis pass/fail checklists with expected vs actual.
-- [x] No inline editing — that's PR #6.
-- [x] `test_article_crud.py` — 14 acceptance tests covering create/list,
-      filters (status / verdict / stage / niche), pagination, PUT + PATCH
-      partial updates, keyword JSON round-trip, soft-delete + hard-delete
-      escape hatch, stage-outputs payload shape, dashboard stats
-      breakdowns, and Niche/Product PATCH preserves untouched fields.
-
-**Acceptance:**
-`pytest -q test_ghost_publisher.py test_editor_verdict.py
-test_observability.py test_article_crud.py` → 28 passed, 1 skipped.
-Frontend `npm run build` clean.
+- [ ] Backend: complete POST/PUT/PATCH/DELETE on Article/Niche/Product;
+      soft-delete; filter by `status`/`editorial_verdict`/`current_stage`/
+      `niche_id`; `GET /api/articles/<id>/stage-outputs`.
+- [ ] Frontend: Dashboard counts by stage + verdict; monthly cost vs cap bar;
+      `awaiting_human_review` queue; ArticlesSimple shows new columns;
+      ArticleDetail tabs for research/strategy/draft/monetization/verdict.
+- [ ] No inline editing yet — that's PR #6.
+- [ ] `test_article_crud.py` mandatory; frontend RTL or QA checklist.
 
 ---
 

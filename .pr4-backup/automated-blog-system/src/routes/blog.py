@@ -101,34 +101,40 @@ def get_product(product_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-def _apply_product_fields(product, data):
-    """Shared helper for PUT/PATCH. Mutates product in place."""
-    for field in ['name', 'description', 'category', 'price', 'currency',
-                  'trend_score', 'search_volume', 'competition_level',
-                  'source_url', 'image_url', 'niche_id']:
-        if field in data:
-            setattr(product, field, data[field])
-    for field in ['affiliate_programs', 'primary_keywords', 'secondary_keywords']:
-        if field in data:
-            setattr(product, field, json.dumps(data[field]))
-
-
-@blog_bp.route('/products/<int:product_id>', methods=['PUT', 'PATCH'])
+@blog_bp.route('/products/<int:product_id>', methods=['PUT'])
 def update_product(product_id):
-    """Update a product (PUT replaces; PATCH partial-updates).
-
-    PATCH semantics in this codebase: same handler — the helper only writes
-    fields the request actually carries, so PUT and PATCH are equivalent here.
-    """
+    """Update a product."""
     try:
         from src.models.product import Product
         from src.models.user import db
 
         product = Product.query.get_or_404(product_id)
-        data = request.get_json() or {}
-        _apply_product_fields(product, data)
+        data = request.get_json()
+
+        # Update product fields
+        for field in ['name', 'description', 'category', 'price', 'currency',
+                      'trend_score', 'search_volume', 'competition_level',
+                      'source_url', 'image_url', 'niche_id']:
+            if field in data:
+                setattr(product, field, data[field])
+
+        # Handle JSON fields
+        if 'affiliate_programs' in data:
+            import json
+            product.affiliate_programs = json.dumps(data['affiliate_programs'])
+        if 'primary_keywords' in data:
+            import json
+            product.primary_keywords = json.dumps(data['primary_keywords'])
+        if 'secondary_keywords' in data:
+            import json
+            product.secondary_keywords = json.dumps(data['secondary_keywords'])
+
         db.session.commit()
-        return jsonify({'success': True, 'product': product.to_dict()})
+
+        return jsonify({
+            'success': True,
+            'product': product.to_dict()
+        })
     except Exception as e:
         logger.error(f"Error updating product: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -204,58 +210,19 @@ def generate_article():
 
 @blog_bp.route('/articles', methods=['GET'])
 def get_articles():
-    """List articles with optional filters + pagination (PR #4).
-
-    Query params:
-        ``status``, ``editorial_verdict``, ``current_stage``, ``niche_id``
-            equality filters
-        ``limit``  default 100, max 500
-        ``offset`` default 0
-        ``include_archived`` ``"1"`` to include archived rows; default
-            excludes them so PR #4's soft-delete is honored.
-
-    Response carries ``{success, articles, total, limit, offset}``.
-    """
+    """Get all articles."""
     try:
         from src.models.product import Article
-
-        q = Article.query
-        for field in ('status', 'editorial_verdict', 'current_stage'):
-            val = request.args.get(field)
-            if val:
-                q = q.filter(getattr(Article, field) == val)
-
+        
         niche_id = request.args.get('niche_id')
         if niche_id:
-            q = q.filter(Article.niche_id == int(niche_id))
-
-        # Soft-delete: by default hide archived rows.
-        if request.args.get('include_archived') != '1':
-            # Show everything except archived (which means status != 'archived'
-            # OR status IS NULL).
-            q = q.filter((Article.status != 'archived') | (Article.status.is_(None)))
-
-        total = q.count()
-        try:
-            limit = max(1, min(500, int(request.args.get('limit', 100))))
-            offset = max(0, int(request.args.get('offset', 0)))
-        except (TypeError, ValueError):
-            limit, offset = 100, 0
-
-        # Stable order so paginated callers see consistent results.
-        articles = (
-            q.order_by(Article.updated_at.desc().nullslast(), Article.id.desc())
-            .limit(limit)
-            .offset(offset)
-            .all()
-        )
-
+            articles = Article.query.filter_by(niche_id=niche_id).all()
+        else:
+            articles = Article.query.all()
+        
         return jsonify({
             'success': True,
-            'articles': [a.to_dict() for a in articles],
-            'total': total,
-            'limit': limit,
-            'offset': offset,
+            'articles': [article.to_dict() for article in articles]
         })
     except Exception as e:
         logger.error(f"Error fetching articles: {e}")
@@ -317,34 +284,31 @@ def get_article(article_id):
         logger.error(f"Error fetching article: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-def _apply_article_fields(article, data):
-    """Shared field copy for PUT/PATCH. Only fields present in ``data`` change."""
-    for field in ['title', 'content', 'meta_description', 'status']:
-        if field in data:
-            setattr(article, field, data[field])
-    if 'keywords' in data:
-        article.keywords = json.dumps(data['keywords'])
-
-
-@blog_bp.route('/articles/<int:article_id>', methods=['PUT', 'PATCH'])
+@blog_bp.route('/articles/<int:article_id>', methods=['PUT'])
 def update_article(article_id):
-    """Update an article — PUT or PATCH; same handler.
-
-    PR #4 adds PATCH alongside PUT. The handler only mutates fields that the
-    request actually carries, so the two verbs behave identically. PATCH is
-    the verb the dashboard uses for "save what changed" flows; PR #6's
-    review UI doubles down on this.
-    """
+    """Update an article."""
     try:
         from src.models.product import Article
         from src.models.user import db
-
+        
         article = Article.query.get_or_404(article_id)
-        data = request.get_json() or {}
-        _apply_article_fields(article, data)
+        data = request.get_json()
+        
+        # Update article fields
+        for field in ['title', 'content', 'meta_description', 'keywords', 'status']:
+            if field in data:
+                if field == 'keywords':
+                    setattr(article, field, json.dumps(data[field]))
+                else:
+                    setattr(article, field, data[field])
+        
         article.updated_at = datetime.utcnow()
         db.session.commit()
-        return jsonify({'success': True, 'article': article.to_dict()})
+        
+        return jsonify({
+            'success': True,
+            'article': article.to_dict()
+        })
     except Exception as e:
         logger.error(f"Error updating article: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -352,78 +316,18 @@ def update_article(article_id):
 
 @blog_bp.route('/articles/<int:article_id>', methods=['DELETE'])
 def delete_article(article_id):
-    """Soft-delete an article (PR #4 — sets ``status='archived'``).
-
-    Hard-delete was the prior behavior; we no longer drop the row because
-    archived articles still need to be referenceable by performance
-    analytics (PR #7) and audit history. To hard-delete, set query param
-    ``hard=1``.
-    """
+    """Delete an article."""
     try:
         from src.models.product import Article
         from src.models.user import db
 
         article = Article.query.get_or_404(article_id)
-
-        if request.args.get('hard') == '1':
-            db.session.delete(article)
-            db.session.commit()
-            return jsonify({'success': True, 'archived': False, 'deleted': True})
-
-        article.status = 'archived'
-        article.updated_at = datetime.utcnow()
+        db.session.delete(article)
         db.session.commit()
-        return jsonify({'success': True, 'archived': True, 'deleted': False})
+
+        return jsonify({'success': True})
     except Exception as e:
         logger.error(f"Error deleting article: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-@blog_bp.route('/articles/<int:article_id>/stage-outputs', methods=['GET'])
-def get_article_stage_outputs(article_id):
-    """Return the four PR #3 stage JSON columns plus the latest verdict.
-
-    Each column is parsed so the dashboard doesn't re-parse JSON. The keys
-    map 1:1 to the Article columns added in migration 0002.
-    """
-    try:
-        from src.models.product import Article
-
-        article = Article.query.get_or_404(article_id)
-
-        def _parse(raw):
-            if not raw:
-                return None
-            try:
-                return json.loads(raw)
-            except (ValueError, TypeError):
-                return raw  # fall back to the raw string so the UI can still show it
-
-        return jsonify({
-            'success': True,
-            'article_id': article.id,
-            'current_stage': article.current_stage,
-            'stage_status': article.stage_status,
-            'cost_usd': float(article.cost_usd) if article.cost_usd is not None else 0.0,
-            'cost_budget_usd': (
-                float(article.cost_budget_usd) if article.cost_budget_usd is not None else None
-            ),
-            'blueprint_id': article.blueprint_id,
-            'editorial_verdict': article.editorial_verdict,
-            'last_error': article.last_error,
-            'last_transition_at': (
-                article.last_transition_at.isoformat() if article.last_transition_at else None
-            ),
-            'stage_outputs': {
-                'research_report': _parse(article.research_report_json),
-                'strategy': _parse(article.strategy_json),
-                'draft_sections': _parse(article.draft_sections_json),
-                'monetization_map': _parse(article.monetization_map_json),
-                'editorial_verdict': _parse(article.last_verdict_json),
-            },
-        })
-    except Exception as e:
-        logger.error(f"Error fetching stage outputs for article {article_id}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @blog_bp.route('/optimize-content', methods=['POST'])
@@ -477,74 +381,29 @@ def analyze_competition():
 
 @blog_bp.route('/dashboard/stats', methods=['GET'])
 def get_dashboard_stats():
-    """Dashboard statistics with PR #4 verdict / stage / cost breakdowns.
-
-    Adds:
-      - ``by_stage``       : ``{current_stage: count}`` (active articles only)
-      - ``by_verdict``     : ``{editorial_verdict: count}``
-      - ``awaiting_review``: count of articles in ``current_stage='awaiting_human_review'``
-      - ``cost``           : ``{spent_usd, cap_usd, month}`` for the current month
-    """
+    """Get dashboard statistics."""
     try:
-        from sqlalchemy import func
-
+        from src.models.product import Product, Article
         from src.models.niche import Niche
-        from src.models.observability import Budget
-        from src.models.product import Article, Product
-        from src.services.cost_meter import CostMeter, DEFAULT_MONTHLY_CAP_USD
-
+        
         niche_id = request.args.get('niche_id')
-
-        article_q = Article.query
-        product_q = Product.query
+        
         if niche_id:
-            article_q = article_q.filter_by(niche_id=int(niche_id))
-            product_q = product_q.filter_by(niche_id=int(niche_id))
-
-        # Exclude archived from the breakdowns so the dashboard reflects
-        # what's "in flight" — archived rows still count in the raw total.
-        active_q = article_q.filter(
-            (Article.status != 'archived') | (Article.status.is_(None))
-        )
-
-        by_stage = dict(
-            active_q
-            .with_entities(Article.current_stage, func.count(Article.id))
-            .group_by(Article.current_stage)
-            .all()
-        )
-        by_verdict = dict(
-            active_q
-            .with_entities(Article.editorial_verdict, func.count(Article.id))
-            .group_by(Article.editorial_verdict)
-            .all()
-        )
-        awaiting_review = active_q.filter(
-            Article.current_stage == 'awaiting_human_review'
-        ).count()
-
-        # Cost panel.
-        month = CostMeter.current_month()
-        spent = float(CostMeter.total_for_month(month))
-        budget_row = Budget.query.filter_by(month=month).first()
-        cap = float(budget_row.cap_usd) if budget_row else float(DEFAULT_MONTHLY_CAP_USD)
-
+            products_count = Product.query.filter_by(niche_id=niche_id).count()
+            articles_count = Article.query.filter_by(niche_id=niche_id).count()
+        else:
+            products_count = Product.query.count()
+            articles_count = Article.query.count()
+        
+        niches_count = Niche.query.filter_by(active=True).count()
+        
         return jsonify({
             'success': True,
             'stats': {
-                'products': product_q.count(),
-                'articles': article_q.count(),
-                'niches': Niche.query.filter_by(active=True).count(),
-                'awaiting_review': awaiting_review,
-                'by_stage': {(k or 'unknown'): v for k, v in by_stage.items()},
-                'by_verdict': {(k or 'PENDING'): v for k, v in by_verdict.items()},
-                'cost': {
-                    'month': month,
-                    'spent_usd': spent,
-                    'cap_usd': cap,
-                    'pct_used': round((spent / cap * 100), 2) if cap else 0.0,
-                },
-                'active_campaigns': 0,  # Placeholder until PR #7's analytics ingest.
+                'products': products_count,
+                'articles': articles_count,
+                'niches': niches_count,
+                'active_campaigns': 0  # Placeholder
             }
         })
     except Exception as e:
@@ -630,7 +489,7 @@ def get_niche(niche_id):
         logger.error(f"Error fetching niche: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@blog_bp.route('/niches/<int:niche_id>', methods=['PUT', 'PATCH'])
+@blog_bp.route('/niches/<int:niche_id>', methods=['PUT'])
 def update_niche(niche_id):
     """Update a niche."""
     try:
