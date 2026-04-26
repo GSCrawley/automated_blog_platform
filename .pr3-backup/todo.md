@@ -56,44 +56,27 @@ target Blueprint. Verdict is binary; every article ends at
 
 ---
 
-## PR #3 — Cost metering + stage observability + Alembic  ✅ SHIPPED
+## PR #3 — Cost metering + stage observability + Alembic  ⬜
 
 **Goal:** know what each article costs in dollars per stage, persist every
 stage's output, and stop one-shot migration scripts.
 
-- [x] Added `Flask-Migrate>=4.0.0` + `alembic>=1.13.0` to
-      `automated-blog-system/requirements.txt`. Flask-Migrate registered in
-      `src/main.py`; migrations directory pinned to `automated-blog-system/migrations/`.
-- [x] Baseline migration `0001_baseline.py` captures the post-PR-#2 schema
-      (every model, including PR #1 Ghost columns and PR #2 verdict columns).
-- [x] PR #3 migration `0002_pr3_observability.py` adds the new columns to
-      `articles`, drops `wordpress_post_id`, and creates `cost_events`,
-      `budgets`, and `editorial_reports`.
-- [x] `services/cost_meter.py` + `services/model_rates.py` — `CostMeter.record`,
-      `total_for_article`, `total_for_month`, `assert_can_start_flow`,
-      `track(article_id, stage)` context manager. Rate card covers gpt-4o-mini,
-      gpt-4o, gpt-4-turbo, gpt-3.5-turbo, text-embedding-3-small/large.
-- [x] Per-article budget halt via `services/stage_persistence.check_and_halt_if_over_budget`
-      (sets `current_stage="halted_budget"`, `stage_status="halted"`).
-      Monthly cap from `GOALS.md` ($100) enforced by
-      `CostMeter.assert_can_start_flow`.
-- [x] Stage output JSON columns persisted via `persist_stage_output` —
-      `research_report_json`, `strategy_json`, `draft_sections_json`,
-      `monetization_map_json`. `last_verdict_json` retained for PR #2 back-compat;
-      `editorial_reports` rows written in parallel for PR #6/#7 join targets.
-- [x] `wordpress_post_id` dropped via `op.batch_alter_table` (SQLite-safe).
-- [x] `routes/budget.py` exposes `GET /api/budget/status`.
-- [x] `BlogCreationFlow` — pre-flow monthly-cap refusal; per-stage persistence;
-      per-stage budget halt that short-circuits subsequent stages.
-- [x] `migrate_add_ghost_columns.py` + `migrate_add_verdict_columns.py` are
-      no-op shims pointing at `flask db upgrade`.
-- [x] `test_observability.py` — 5 acceptance tests (Alembic round-trip in a
-      fresh subprocess, cost metering, per-article halt, monthly cap refusal,
-      stage outputs persist through all four stages).
-
-**Acceptance:**
-`pytest -q test_ghost_publisher.py test_editor_verdict.py test_observability.py`
-→ 14 passed, 1 skipped (the live Ghost test).
+- [ ] Add `Flask-Migrate` + `alembic` to requirements; bootstrap
+      `automated-blog-system/migrations/`.
+- [ ] Baseline migration matching current schema (incl. PR #1 + PR #2
+      columns).
+- [ ] `services/cost_meter.py` + `model_rates.py` writing to a `cost_events`
+      table; per-article + per-month roll-ups.
+- [ ] Per-article budget halt (`Article.cost_budget_usd`) and monthly cap
+      from `GOALS.md` ($100) backed by a `budgets` table.
+- [ ] Stage output JSON columns persisted (`research_report_json`,
+      `strategy_json`, `draft_sections_json`, `monetization_map_json`).
+      `editorial_reports` table replaces `last_verdict_json`.
+- [ ] Drop `wordpress_post_id` in the same migration.
+- [ ] Convert `migrate_add_ghost_columns.py` and
+      `migrate_add_verdict_columns.py` to no-op shims pointing at Alembic.
+- [ ] `test_observability.py` — Alembic round-trip, cost metering,
+      budget halt, monthly cap refusal, stage outputs persisted.
 
 ---
 
