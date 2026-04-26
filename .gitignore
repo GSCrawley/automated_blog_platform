@@ -21,6 +21,7 @@ yarn-error.log
 *.db
 *.sqlite
 *.sqlite3
+*.rdb
 
 # IDE files
 .idea/

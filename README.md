@@ -13,11 +13,14 @@ Ordered build plan lives in [`todo.md`](todo.md). Commands live in
 ## What's in the box
 
 **CrewAI BlogCreationFlow** (`core/crewai_system/`) — a 5-stage typed
-pipeline: Research → Strategy → Creation → Editorial → Revision. Real-time
-research uses Tavily, SerperDev, and Firecrawl. Editorial returns a
-structured verdict (`PUBLISH` / `REVISE` / `REJECT`) per axis (Content,
-SEO/UX, Monetization, Compliance). Only `PUBLISH` articles ever reach the
-Publisher.
+pipeline: Research → Strategy → Creation → Editorial → `awaiting_human_review`.
+Real-time research uses Tavily, SerperDev, and Firecrawl. The Editor
+(rewritten in PR #2 as a pure-Python orchestrator over four axis evaluators —
+Conformance / Content Quality / Monetization / Compliance) emits a binary
+`EditorialVerdict` (`PUBLISH` | `REJECT`) measured against a target
+`Blueprint` from the Pattern Library (PR #5a; stubbed in PR #2). There is no
+automated revision loop — every article ends in the human review queue (PR #6).
+Only verdict=`PUBLISH` articles ever reach the Publisher.
 
 **Custom Redis-backed agent framework** (`core/agents/`) — Orchestrator and
 Market Analytics agents are live; Author, Editor, Product Scout, and
@@ -80,20 +83,23 @@ the `POST /api/publisher/publish/<article_id>` endpoint.
 
 ---
 
-## The 5 PRs that get us to a first published, revenue-capable article
+## The PR roadmap
 
-The roadmap is explicit and narrow — finish these five in order and one blog
-ships end-to-end. Larger roadmap items (multi-blog, SaaS, TikTok) wait.
+The full plan lives in [`PRs_2_through_7.md`](PRs_2_through_7.md); `todo.md`
+mirrors the high-level checklist. The system's moat is the Pattern Library
+plus the Performance Feedback Loop (PR #5a + PR #7), not any one agent's
+prose ability.
 
-| PR  | Title                                                       | Status         |
-|-----|-------------------------------------------------------------|----------------|
-| #1  | Ghost Headless CMS publisher + Article verdict gating       | ✅ Shipped     |
-| #2  | Structured editor verdict + axis-scoped revision routing    | 🟡 Next        |
-| #3  | Durable pipeline state + resumability + budget breaker      | ⬜ Planned     |
-| #4  | Article CRUD completion + minimal approval UI               | ⬜ Planned     |
-| #5  | LanceDB embedding-backed retrieval (replace token-overlap)  | ⬜ Planned     |
-
-See `todo.md` for sub-tasks and acceptance criteria per PR.
+| PR   | Title                                                       | Status         |
+|------|-------------------------------------------------------------|----------------|
+| #1   | Ghost Headless CMS publisher + Article verdict gating       | ✅ Shipped     |
+| #2   | Structured EditorialVerdict + Blueprint stub + 4 axes       | ✅ Shipped     |
+| #3   | Cost metering + stage observability + Alembic               | ⬜ Next        |
+| #4   | CRUD completion + dashboard with cost/verdict visibility    | ⬜ Planned     |
+| #5a  | SERP Forensics + Pattern Library (the heart of the system)  | ⬜ Planned     |
+| #5b  | LanceDB retrieval unification                               | ⬜ Planned     |
+| #6   | Human-in-the-loop review + publish UI (only publish path)   | ⬜ Planned     |
+| #7   | Performance Feedback Loop (after ≥20 published articles)    | ⬜ Planned     |
 
 ---
 
