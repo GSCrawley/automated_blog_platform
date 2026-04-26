@@ -65,11 +65,29 @@ def run_editorial_review(
 
     verdict = EditorCrew().review(article_dict, blueprint, llm=llm)
 
+    report_json = json.dumps(verdict.to_json())
     article.editorial_verdict = verdict.verdict
-    article.last_verdict_json = json.dumps(verdict.to_json())
+    article.last_verdict_json = report_json
     article.blueprint_id = blueprint.id
     article.current_stage = "awaiting_human_review"
     db.session.commit()
+
+    # PR #3: also write a normalized EditorialReport row so PR #6's review
+    # queue and PR #7's feedback engine have a clean join target.
+    try:
+        from src.services.stage_persistence import record_editorial_report  # noqa: WPS433
+
+        record_editorial_report(
+            article_id=article.id,
+            verdict=verdict.verdict,
+            blocking_axes=list(verdict.blocking_axes),
+            report_json=report_json,
+            blueprint_id=blueprint.id,
+        )
+    except Exception:
+        # Don't fail the review if the normalized table write hits an issue
+        # (e.g. table not yet migrated in a partially-upgraded env).
+        logger.exception("Failed to write EditorialReport row for article %s", article_id)
 
     logger.info(
         "EditorialVerdict for article %s: verdict=%s blocking=%s blueprint=%s",

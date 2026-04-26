@@ -10,7 +10,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), '..'
 
 from flask import Flask, send_from_directory, request, jsonify
 from flask_cors import CORS
-from flask_migrate import Migrate
 from src.config import Config
 
 # Set up logging
@@ -30,20 +29,10 @@ def create_app():
     # Initialize CORS
     CORS(app)
 
-    # Import models (ensures tables are created and visible to Alembic autogenerate)
+    # Import models (ensures tables are created)
     from src.models.product import Product, Article
     from src.models.niche import Niche
     from src.models.agent_models import AgentState, BlogInstance, AgentTask, AgentDecision
-    from src.models.observability import CostEvent, Budget, EditorialReport  # PR #3
-
-    # Initialize Flask-Migrate (PR #3). The migrations/ directory lives at
-    # automated-blog-system/migrations/ — relative to the working dir set by
-    # FLASK_APP=src.main:create_app.
-    migrations_dir = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "migrations",
-    )
-    Migrate(app, db, directory=migrations_dir)
 
     # Initialize Agent Manager (attached to app for route access)
     try:
@@ -109,13 +98,6 @@ def create_app():
         print("✅ Publisher blueprint registered successfully")
     except Exception as e:
         print(f"❌ Error registering publisher blueprint: {e}")
-
-    try:
-        from src.routes.budget import budget_bp
-        app.register_blueprint(budget_bp, url_prefix='/api/budget')
-        print("✅ Budget blueprint registered successfully")
-    except Exception as e:
-        print(f"❌ Error registering budget blueprint: {e}")
 
 
     # Serve React Frontend

@@ -66,21 +66,13 @@ class Article(db.Model):
     status = db.Column(db.String(20), default='draft')  # draft, published, archived
     product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
     niche_id = db.Column(db.Integer, db.ForeignKey('niches.id'), nullable=True)
+    wordpress_post_id = db.Column(db.Integer)
     ghost_post_id = db.Column(db.String(64))
     published_url = db.Column(db.String(500))
     editorial_verdict = db.Column(db.String(20), default='PENDING')
-    last_verdict_json = db.Column(db.Text)  # PR #2 — full EditorialVerdict; PR #3 mirrors to editorial_reports
+    last_verdict_json = db.Column(db.Text)  # PR #2 — full EditorialVerdict; PR #3 replaces with editorial_reports table
     blueprint_id = db.Column(db.String(64))  # PR #2 stub; PR #5a backs this with a real Blueprint row
-    current_stage = db.Column(db.String(40), default='stage_0')  # PR #2/#3 — flips on each transition
-    stage_status = db.Column(db.String(20), default='pending')  # PR #3 — pending|running|complete|halted_budget|error
-    cost_usd = db.Column(db.Numeric(10, 4), default=0)  # PR #3 — running per-article spend
-    cost_budget_usd = db.Column(db.Numeric(10, 4), default=5)  # PR #3 — per-article cap (default $5.00)
-    research_report_json = db.Column(db.Text)  # PR #3 — Stage 0 output
-    strategy_json = db.Column(db.Text)  # PR #3 — Stage 1 output
-    draft_sections_json = db.Column(db.Text)  # PR #3 — Stage 2 output
-    monetization_map_json = db.Column(db.Text)  # PR #3 — Stage 2 output (CTA placement plan)
-    last_error = db.Column(db.Text)  # PR #3 — last exception text
-    last_transition_at = db.Column(db.DateTime)  # PR #3 — when current_stage was last set
+    current_stage = db.Column(db.String(40), default='stage_0')  # PR #2 sets 'awaiting_human_review' after review
     seo_score = db.Column(db.Float, default=0.0)
     readability_score = db.Column(db.Float, default=0.0)
     word_count = db.Column(db.Integer, default=0)
@@ -104,21 +96,13 @@ class Article(db.Model):
             'product_name': self.product.name if self.product else None,
             'niche_id': self.niche_id,
             'niche_name': self.niche.name if self.niche else None,
+            'wordpress_post_id': self.wordpress_post_id,
             'ghost_post_id': self.ghost_post_id,
             'published_url': self.published_url,
             'editorial_verdict': self.editorial_verdict,
             'last_verdict_json': self.last_verdict_json,
             'blueprint_id': self.blueprint_id,
             'current_stage': self.current_stage,
-            'stage_status': self.stage_status,
-            'cost_usd': str(self.cost_usd) if self.cost_usd is not None else "0",
-            'cost_budget_usd': str(self.cost_budget_usd) if self.cost_budget_usd is not None else "0",
-            'research_report_json': self.research_report_json,
-            'strategy_json': self.strategy_json,
-            'draft_sections_json': self.draft_sections_json,
-            'monetization_map_json': self.monetization_map_json,
-            'last_error': self.last_error,
-            'last_transition_at': self.last_transition_at.isoformat() if self.last_transition_at else None,
             'seo_score': self.seo_score,
             'readability_score': self.readability_score,
             'word_count': self.word_count,
