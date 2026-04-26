@@ -131,11 +131,8 @@ const ArticlesSimple = () => {
   };
 
   const handleDelete = async (article) => {
-    // PR #4: DELETE is now a soft-archive — the row stays, status flips to
-    // 'archived', and it disappears from the default list. Pass `?hard=1`
-    // server-side if a real delete is ever needed.
     const confirmed = window.confirm(
-      `Archive "${article.title}"?\n\nThe article will be hidden from the default list but stays in the database.`
+      `Are you sure you want to delete "${article.title}"?\n\nThis action cannot be undone.`
     );
 
     if (!confirmed) {
@@ -542,104 +539,59 @@ const ArticlesSimple = () => {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stage</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Verdict</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Published</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredArticles.map((article) => {
-                  const verdict = (article.editorial_verdict || 'PENDING').toUpperCase();
-                  const verdictClass =
-                    verdict === 'PUBLISH'
-                      ? 'bg-green-100 text-green-800'
-                      : verdict === 'REJECT'
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-gray-100 text-gray-800';
-                  return (
-                    <tr key={article.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium text-gray-900">{article.title}</div>
-                        {article.meta_description && (
-                          <div className="text-sm text-gray-500 max-w-xs truncate">
-                            {article.meta_description}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          article.status === 'published' ? 'bg-green-100 text-green-800' :
-                          article.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
-                          article.status === 'archived' ? 'bg-gray-200 text-gray-700' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {article.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-700 font-mono">
-                        {article.current_stage || '—'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${verdictClass}`}>
-                          {verdict}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {article.cost_usd != null
-                          ? `$${Number(article.cost_usd).toFixed(2)}`
-                          : '—'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {article.published_url ? (
-                          <a
-                            href={article.published_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-blue-600 hover:underline"
-                            title={article.published_url}
-                          >
-                            live ↗
-                          </a>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <Link
-                          to={`/articles/${article.id}`}
-                          className="text-blue-600 hover:text-blue-900 mr-3 font-medium"
-                          title="Open detail view (research, strategy, draft, monetization, verdict)"
-                        >
-                          🔍 Details
-                        </Link>
-                        <Link
-                          to={`/articles/${article.id}/editor`}
-                          className="text-purple-600 hover:text-purple-900 mr-3 font-medium"
-                          title="Open in visual editor with live preview"
-                        >
-                          👁 Preview &amp; Edit
-                        </Link>
-                        <button
-                          onClick={() => handleEdit(article)}
-                          className="text-indigo-600 hover:text-indigo-900 mr-3"
-                        >
-                          ✏️ Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(article)}
-                          disabled={deleting === article.id}
-                          className={`text-red-600 hover:text-red-900 ${
-                            deleting === article.id ? 'opacity-50 cursor-not-allowed' : ''
-                          }`}
-                        >
-                          {deleting === article.id ? '⏳ Archiving...' : '🗄️ Archive'}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {filteredArticles.map((article) => (
+                  <tr key={article.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="font-medium text-gray-900">{article.title}</div>
+                      {article.meta_description && (
+                        <div className="text-sm text-gray-500 max-w-xs truncate">
+                          {article.meta_description}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        article.status === 'published' ? 'bg-green-100 text-green-800' :
+                        article.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {article.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {article.created_at ? new Date(article.created_at).toLocaleDateString() : 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <Link
+                        to={`/articles/${article.id}/editor`}
+                        className="text-purple-600 hover:text-purple-900 mr-3 font-medium"
+                        title="Open in visual editor with live preview"
+                      >
+                        👁 Preview &amp; Edit
+                      </Link>
+                      <button
+                        onClick={() => handleEdit(article)}
+                        className="text-indigo-600 hover:text-indigo-900 mr-3"
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(article)}
+                        disabled={deleting === article.id}
+                        className={`text-red-600 hover:text-red-900 ${
+                          deleting === article.id ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        {deleting === article.id ? '⏳ Deleting...' : '🗑️ Delete'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

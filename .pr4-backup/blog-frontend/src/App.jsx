@@ -3,7 +3,6 @@ import Layout from './components/Layout'
 import Dashboard from './components/Dashboard'
 import ProductApproval from './components/ProductApproval'
 import ArticlesSimple from './components/ArticlesSimple'
-import ArticleDetail from './components/ArticleDetail'
 import ArticleEditor from './components/ArticleEditor'
 import NichesSimple from './components/NichesSimple'
 import Settings from './components/Settings'
@@ -26,7 +25,6 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/products" element={<ProductsSimple />} />
               <Route path="/articles" element={<ArticlesSimple />} />
-              <Route path="/articles/:id" element={<ArticleDetail />} />
               <Route path="/niches" element={<NichesSimple />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/api-test" element={<ApiTest />} />

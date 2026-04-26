@@ -100,6 +100,12 @@ class CostMeter:
         return cost
 
     @staticmethod
+    def current_month() -> str:
+        """Current month key (``YYYY-MM``, UTC). Public alias for callers
+        that want CostMeter as the single source of truth for month logic."""
+        return _current_month()
+
+    @staticmethod
     def total_for_article(article_id: int) -> Decimal:
         total = (
             db.session.query(func.coalesce(func.sum(CostEvent.cost_usd), 0))
