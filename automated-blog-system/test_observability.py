@@ -142,7 +142,10 @@ with app.app_context():
         'article_columns': sorted(c['name'] for c in insp.get_columns('articles')),
     }}
 
-    downgrade(revision='-1')
+    # Downgrade ALL THE WAY to 0001 to verify both PR #3 and PR #5a are
+    # reversible. Using a fixed target (rather than -1) keeps the test
+    # stable as new migrations land.
+    downgrade(revision='0001')
     insp = inspect(db.engine)
     after_down = {{
         'tables': sorted(insp.get_table_names()),
@@ -187,17 +190,21 @@ def test_alembic_upgrade_then_downgrade_one_round_trip():
         payload = json.loads(result.stdout.strip().splitlines()[-1])
         up, down = payload["after_up"], payload["after_down"]
 
-        # After upgrade
+        # After upgrade — full schema (baseline + PR #3 + PR #5a)
         assert {"cost_events", "budgets", "editorial_reports"} <= set(up["tables"])
+        assert {"blueprints", "serp_profiles"} <= set(up["tables"])
         assert "articles" in up["tables"]
         assert "cost_usd" in up["article_columns"]
         assert "current_stage" in up["article_columns"]
         assert "wordpress_post_id" not in up["article_columns"]
 
-        # After downgrade -1
+        # After downgrade to 0001 — PR #3 + PR #5a artifacts gone, baseline
+        # tables intact, wordpress_post_id restored.
         assert "cost_events" not in down["tables"]
         assert "budgets" not in down["tables"]
         assert "editorial_reports" not in down["tables"]
+        assert "blueprints" not in down["tables"]
+        assert "serp_profiles" not in down["tables"]
         assert "articles" in down["tables"]  # baseline survives
         assert "cost_usd" not in down["article_columns"]
         assert "wordpress_post_id" in down["article_columns"]

@@ -138,39 +138,6 @@ class BlogCreationFlow(Flow[BlogCreationState]):
         )
 
     @listen(run_research_stage)
-    def run_blueprint_selection_stage(self):
-        """Stage 0.5 — Blueprint Selection (PR #5a).
-
-        Loads the freshest Pattern-Library Blueprint for this niche. If
-        none exists or it's stale (>30 days), triggers a SerpForensics
-        refresh. Attaches ``blueprint_id`` to the Article row so the
-        Editor (PR #2) and the Strategy/Creation crews can read against
-        the active blueprint.
-
-        Refresh failures fall back to the stub Blueprint — observability
-        bugs shouldn't kill the pipeline.
-        """
-        if self.state.halted:
-            return
-        if not self.state.current_article_id:
-            return
-        log.info("[BlogCreationFlow] Stage 0.5: Blueprint Selection")
-        try:
-            from src.services.stage_persistence import select_blueprint_for_article  # noqa: WPS433
-
-            blueprint_id = select_blueprint_for_article(
-                int(self.state.current_article_id),
-                niche_name=self.state.niche,
-                target_query_cluster=[self.state.current_topic or self.state.niche],
-            )
-            log.info(
-                "[BlogCreationFlow] Stage 0.5: Selected blueprint %s",
-                blueprint_id,
-            )
-        except Exception:  # pragma: no cover — best-effort
-            log.exception("Stage 0.5 (blueprint selection) failed; continuing")
-
-    @listen(run_blueprint_selection_stage)
     def run_strategy_stage(self):
         if self.state.halted:
             return

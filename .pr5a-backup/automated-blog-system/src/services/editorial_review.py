@@ -57,19 +57,8 @@ def run_editorial_review(
         raise ValueError(f"Article {article_id} not found")
 
     if blueprint is None:
-        # PR #5a: prefer the DB-backed Pattern Library blueprint when one
-        # exists for the article's niche. Falls back to the PR #2 stub if
-        # nothing has been generated yet (and refresh is suppressed here —
-        # the editor stage shouldn't trigger SERP fetches; that's Stage
-        # 0.5's job).
-        from src.services.blueprint_repo import get_blueprint_for_niche  # noqa: WPS433
-
         niche_name = article.niche.name if article.niche else None
-        blueprint = get_blueprint_for_niche(
-            niche_id=article.niche_id,
-            niche_name=niche_name,
-            allow_refresh=False,
-        )
+        blueprint = load_stub_blueprint(niche_name)
 
     article_dict = article.to_headless_contract()
     article_dict["id"] = article.id
