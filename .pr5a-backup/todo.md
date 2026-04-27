@@ -151,50 +151,19 @@ or Ghost Pro at ~$9/mo. Set `GHOST_API_URL` + `GHOST_ADMIN_KEY`. Run
 
 ---
 
-## PR #5a — SERP Forensics + Pattern Library  ✅ SHIPPED
+## PR #5a — SERP Forensics + Pattern Library  ⬜
 
-**The one where the agents become smart.** Editor now grades against an
-empirically-derived Blueprint, not a hand-written stub.
+**The big one — this is where the agents become smart.**
 
-- [x] Alembic migration `0003_pr5a_pattern_library.py` adds the
-      `blueprints` and `serp_profiles` tables. Both tables drop cleanly on
-      downgrade.
-- [x] `models/pattern_library.py` — `BlueprintRow` (versioned, with
-      `parent_blueprint_id` for audit) and `SerpProfile` (cached per
-      `(url, query)`). `BlueprintRow.to_blueprint()` /
-      `from_blueprint()` round-trip the in-memory contract losslessly.
-- [x] `services/serp_forensics.py` — `SerpForensics` class with
-      `pull_serp` (Serper), `fetch_html` (Firecrawl with plain-GET
-      fallback), `profile_url` (HTML→`ArticleProfile`), `aggregate` (per-
-      field median/IQR + confidence tiers), `identify_gaps`. HTML parsing
-      is regex-only — deterministic, dependency-free.
-- [x] `services/blueprint_repo.py` — `get_blueprint_for_niche` (DB →
-      refresh → stub fallback), `persist_blueprint` (versioned write),
-      `refresh_blueprint` (pull SERP → profile → aggregate → persist).
-      `allow_refresh=False` keeps unit tests network-free.
-- [x] Stage 0.5 — Blueprint Selection — wired into `BlogCreationFlow`
-      between Research and Strategy via
-      `stage_persistence.select_blueprint_for_article`. Sets
-      `Article.blueprint_id` and flips `current_stage` to
-      `stage_0_5_blueprint_selected`.
-- [x] `editorial_review` now pulls the active Blueprint via
-      `blueprint_repo.get_blueprint_for_niche(allow_refresh=False)`
-      instead of the PR #2 stub. The stub remains as the bottom fallback
-      for niches the Pattern Library hasn't covered yet.
-- [x] Freshness policy — default 30 days
-      (`DEFAULT_BLUEPRINT_TTL_DAYS`); per-niche override deferred to a
-      future PR per the doc's "When stuck" guidance.
-- [x] `test_serp_forensics.py` — 7 cases: deterministic profile
-      extraction (HTML fixture), confidence tiers (tight/spread/mixed),
-      gap identification with planted gaps, BlueprintRow persistence +
-      version bump + parent linkage, Stage 0.5 with fresh DB row, Stage
-      0.5 stub fallback, Stage 0.5 stale → refresh path with injected
-      profiles.
-
-**Acceptance:**
-`pytest -q test_ghost_publisher.py test_editor_verdict.py
-test_observability.py test_article_crud.py test_serp_forensics.py` →
-35 passed, 1 skipped.
+- [ ] `services/serp_forensics.py` — Serper SERP pull, Firecrawl profile
+      extraction, aggregator with confidence tiers, gap identification.
+- [ ] `blueprints` + `serp_profiles` tables (Alembic).
+- [ ] Stage 0.5 — Blueprint Selection — between Research and Strategy.
+- [ ] Stub blueprint loader from PR #2 replaced with Pattern-Library lookup.
+- [ ] Freshness policy (default 30 days, niche-overridable).
+- [ ] `test_serp_forensics.py` — deterministic profile extraction, expected
+      confidence tiers, gap identification, Blueprint persistence,
+      Stage 0.5 integration.
 
 ---
 

@@ -98,6 +98,49 @@ def check_and_halt_if_over_budget(article_id: int) -> bool:
     return False
 
 
+def select_blueprint_for_article(
+    article_id: int,
+    *,
+    niche_name: Optional[str] = None,
+    target_query_cluster: Optional[list] = None,
+    allow_refresh: bool = True,
+) -> Optional[str]:
+    """Stage 0.5 — pick (or refresh) the active Blueprint for the article's
+    niche and pin its id onto the Article row.
+
+    Returns the chosen blueprint id, or ``None`` if the article doesn't
+    exist. Sets ``current_stage = 'stage_0_5_blueprint_selected'`` so the
+    dashboard can see the selection.
+
+    The unit test path passes ``allow_refresh=False`` to keep the stage
+    network-free; production passes ``True`` and lets refresh failures
+    fall through to the stub.
+    """
+    from src.services.blueprint_repo import get_blueprint_for_niche  # noqa: WPS433
+
+    article = db.session.get(Article, article_id)
+    if article is None:
+        return None
+
+    niche_id = article.niche_id
+    nname = niche_name
+    if nname is None and article.niche is not None:
+        nname = article.niche.name
+
+    blueprint = get_blueprint_for_niche(
+        niche_id=niche_id,
+        niche_name=nname,
+        target_query_cluster=target_query_cluster,
+        allow_refresh=allow_refresh,
+    )
+    article.blueprint_id = blueprint.id
+    article.current_stage = "stage_0_5_blueprint_selected"
+    article.stage_status = "complete"
+    article.last_transition_at = datetime.utcnow()
+    db.session.commit()
+    return blueprint.id
+
+
 def record_editorial_report(
     article_id: int,
     verdict: str,
@@ -129,4 +172,5 @@ __all__ = [
     "halt_article_for_budget",
     "check_and_halt_if_over_budget",
     "record_editorial_report",
+    "select_blueprint_for_article",
 ]
