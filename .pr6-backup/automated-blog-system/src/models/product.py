@@ -81,9 +81,6 @@ class Article(db.Model):
     monetization_map_json = db.Column(db.Text)  # PR #3 — Stage 2 output (CTA placement plan)
     last_error = db.Column(db.Text)  # PR #3 — last exception text
     last_transition_at = db.Column(db.DateTime)  # PR #3 — when current_stage was last set
-    ghost_updated_at = db.Column(db.DateTime)  # PR #6 — Ghost-side updated_at for optimistic concurrency
-    last_ghost_sync_hash = db.Column(db.String(128))  # PR #6 — sha256 of last (title+html+meta+tags) sent to / pulled from Ghost
-    has_unpushed_changes = db.Column(db.Boolean, default=False, nullable=False)  # PR #6 — convenience flag derived from sync hash
     seo_score = db.Column(db.Float, default=0.0)
     readability_score = db.Column(db.Float, default=0.0)
     word_count = db.Column(db.Integer, default=0)
@@ -122,9 +119,6 @@ class Article(db.Model):
             'monetization_map_json': self.monetization_map_json,
             'last_error': self.last_error,
             'last_transition_at': self.last_transition_at.isoformat() if self.last_transition_at else None,
-            'ghost_updated_at': self.ghost_updated_at.isoformat() if self.ghost_updated_at else None,
-            'last_ghost_sync_hash': self.last_ghost_sync_hash,
-            'has_unpushed_changes': bool(self.has_unpushed_changes),
             'seo_score': self.seo_score,
             'readability_score': self.readability_score,
             'word_count': self.word_count,

@@ -98,7 +98,7 @@ prose ability.
 | #4   | CRUD completion + dashboard with cost/verdict visibility    | ✅ Shipped     |
 | #5a  | SERP Forensics + Pattern Library (the heart of the system)  | ✅ Shipped     |
 | #5b  | LanceDB retrieval unification                               | ✅ Shipped     |
-| #6   | Human-in-the-loop review + publish UI (only publish path)   | ⬜ Planned     |
+| #6   | Human-in-the-loop review + publish UI (only publish path)   | ✅ Shipped     |
 | #7   | Performance Feedback Loop (after ≥20 published articles)    | ⬜ Planned     |
 
 ---
@@ -111,7 +111,7 @@ cd automated-blog-system
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 FLASK_APP=src.main:create_app flask db upgrade
-pytest -q test_ghost_publisher.py test_editor_verdict.py test_observability.py test_article_crud.py test_serp_forensics.py test_retrieval.py -k "not live"
+pytest -q test_ghost_publisher.py test_editor_verdict.py test_observability.py test_article_crud.py test_serp_forensics.py test_retrieval.py test_review_routes.py -k "not live"
 ```
 
 ---

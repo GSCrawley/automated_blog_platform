@@ -246,58 +246,19 @@ test_retrieval.py test_knowledge_base.py` → 44 passed, 1 skipped.
 
 ---
 
-## PR #6 — Human-in-the-loop review + publish UI  ✅ SHIPPED
+## PR #6 — Human-in-the-loop review + publish UI  ⬜
 
-**Goal:** the only path from `awaiting_human_review` to a live Ghost
-post is a human clicking Publish in the UI. PR #6 builds that surface,
-plus the local-vs-Ghost drift detection that lets reviewers spot edits
-made in Ghost Admin.
-
-- [x] Alembic `0004_pr6_review_ui.py` adds `ghost_updated_at`,
-      `last_ghost_sync_hash`, `has_unpushed_changes` to `articles` and
-      creates `article_revisions` (append-only pre-pull/pre-push
-      snapshots).
-- [x] `GhostService.fetch_post(post_id, *, use_cache)` and
-      `set_status(post_id, status)`. 60-second in-process cache keyed by
-      `(api_url, post_id)` so dashboard fan-out doesn't hammer Ghost.
-      `compute_content_hash()`, `extract_ghost_payload()`, and
-      `diff_payloads()` form the drift toolkit.
-- [x] `routes/publisher.py` factors out `publish_article_now(article)`
-      which `routes/review.py` reuses — single source of truth for the
-      publish-to-Ghost code path.
-- [x] `routes/review.py` ships eight endpoints under `/api/review`:
-      `queue`, `<id>` (GET + PATCH), `publish`, `unpublish`, `ghost`,
-      `pull-from-ghost`, `push-to-ghost`. PATCH validates
-      `meta_description ≤ 160 chars`, `keywords ≤ 10`, CTA URLs.
-      Per-article `threading.Lock` (keyed by id) serializes mutating
-      operations.
-- [x] Frontend: `services/api.js` gains `reviewApi.*` with JSDoc
-      typedefs; `ReviewQueue.jsx` (dedicated review screen with verdict
-      filter + sort + per-axis scores), `ArticleReview.jsx` (two-column
-      editor + Editorial Report panel + Ghost Preview iframe + footer
-      actions + 30-second autosave + confirm-publish modal),
-      `PublishedArticles.jsx` (drift indicator per row, sequential
-      drift fan-out, Pull / Push / Review actions). Layout sidebar adds
-      "Review Queue" + "Published" entries. ArticlesSimple gets a
-      "Review & Publish" link for `verdict==='PUBLISH'` rows.
-- [x] `test_review_routes.py` — 11 cases: verdict gate (publish + push),
-      PATCH round-trip, PATCH validation (meta length, CTA URLs),
-      publish path with mocked Ghost (asserts the request body),
-      pull-from-Ghost overwrites local + records revision,
-      drift detection on divergent Ghost HTML, push-to-Ghost sends edits
-      + records pre-push revision, push refuses without `ghost_post_id`,
-      push refuses non-PUBLISH verdict, plus the "no autonomous publish"
-      grep guard scanning the repo for forbidden call sites outside
-      `routes/review.py` / `routes/publisher.py` / the Ghost service.
-- [x] Frontend RTL tests: skipped per the doc's "manual QA checklist
-      acceptable" allowance — see the manual E2E recipe in `RUN.md`.
-
-**Acceptance:**
-`pytest -q test_ghost_publisher.py test_editor_verdict.py
-test_observability.py test_article_crud.py test_serp_forensics.py
-test_retrieval.py test_knowledge_base.py test_review_routes.py` →
-55 passed, 1 skipped.
-Frontend `npm run build` clean.
+- [ ] `routes/review.py` — queue, get, PATCH, publish, unpublish, ghost-fetch,
+      pull-from-ghost, push-to-ghost.
+- [ ] `GhostService.fetch_post()` + `set_status()`.
+- [ ] `article_revisions` table for snapshots before pull/push.
+- [ ] React: `ArticleReview.jsx` (Tiptap + Sections + CTAs + SEO tabs +
+      Editorial Report + Blueprint Conformance + Ghost Preview iframe);
+      `PublishedArticles.jsx` with drift indicators and side-by-side diff.
+- [ ] Per-article in-process lock (`threading.Lock`).
+- [ ] `test_review_routes.py` + frontend RTL flows + a documented manual E2E.
+- [ ] Grep guard test: `/api/publisher/publish/` only callable from
+      `routes/review.py` and `routes/publisher.py`.
 
 ---
 
