@@ -81,6 +81,10 @@ def run_editorial_review(
     article.last_verdict_json = report_json
     article.blueprint_id = blueprint.id
     article.current_stage = "awaiting_human_review"
+    # ``stage_status`` was being left at its 'pending' default after editor
+    # ran — the smoke-test caught that and the dashboard / queue care about
+    # this field. The review *did* complete; mark it.
+    article.stage_status = "complete"
     db.session.commit()
 
     # PR #3: also write a normalized EditorialReport row so PR #6's review

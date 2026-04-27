@@ -58,7 +58,7 @@ the `POST /api/publisher/publish/<article_id>` endpoint.
                     └─────────────┬───────────────────┘
                                   │ REST
                     ┌─────────────▼───────────────────┐
-                    │   Flask API (5001)              │
+                    │   Flask API (5000)              │
                     │   /api/blog  /api/automation    │
                     │   /api/agents  /api/publisher   │
                     └──┬───────┬──────────┬───────────┘

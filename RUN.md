@@ -1,98 +1,186 @@
 # Runbook
 
-Common commands for local development. Paths assume you are in the repo root
-unless noted.
+Common commands for local development. Paths assume you are in the repo
+root unless noted. Last verified end-to-end on the `foundation-cleanup`
+branch — see *Foundation smoke test* below.
 
 ## First-time setup
+
 ```bash
 cd automated-blog-system
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-python -m scripts.migrate_add_ghost_columns
+FLASK_APP=src.main:create_app flask db upgrade   # 0001 → 0002 → 0003
 ```
 
-## Running the system
-```bash
-# Terminal 1 — Redis (required for agent pub/sub)
-redis-server
+The migrations directory is `automated-blog-system/migrations/`. Three
+revisions are applied:
 
-# Terminal 2 — Flask backend on :5001
+- `0001` — baseline (PR #1 + PR #2 columns)
+- `0002` — PR #3 observability (cost_events, budgets, editorial_reports,
+  drops `wordpress_post_id`)
+- `0003` — PR #5a Pattern Library (blueprints, serp_profiles)
+
+PR #2's old one-shot `migrate_add_ghost_columns.py` and
+`migrate_add_verdict_columns.py` are now no-op shims that point at
+`flask db upgrade`.
+
+## Running the system
+
+The agent system + Redis are **optional** — `create_app()` logs a
+warning and continues without them. None of PR #2–#5b depends on Redis.
+
+```bash
+# Terminal 1 — Flask backend on :5000
 cd automated-blog-system
 source venv/bin/activate
-bash ../start_backend.sh
+python src/main.py
 
-# Terminal 3 — React frontend on :5173
+# Terminal 2 — React frontend on :5173 (Vite dev server)
 cd blog-frontend
 npm install   # first time only
-bash ../start_frontend.sh
+npm run dev
 
-# Terminal 4 — agent system
-source automated-blog-system/venv/bin/activate
+# (Optional) Terminal 3 — Redis if you want the legacy agent framework
+redis-server
+pip install redis      # the package isn't in requirements.txt yet
 python start_agents.py
 ```
 
+Backend listens on `0.0.0.0:5000`. Frontend dev server listens on `:5173`
+and proxies `/api/*` to the backend via `VITE_API_BASE_URL` (defaults to
+`http://127.0.0.1:5000/api`).
+
 ## Tests
+
 ```bash
 cd automated-blog-system
 source venv/bin/activate
 
-# Publisher (PR #1) — mocked, no Ghost needed
-pytest -q test_ghost_publisher.py -k "not live"
+# Full suite (PR #1 → PR #5b)
+pytest -q test_ghost_publisher.py test_editor_verdict.py \
+          test_observability.py test_article_crud.py \
+          test_serp_forensics.py test_retrieval.py \
+          test_knowledge_base.py -k "not live"
 
-# Publisher — LIVE against a real Ghost instance (creates a draft only)
+# Live Ghost smoke (creates a draft on a real Ghost instance)
 export GHOST_API_URL="https://your-ghost.example.com"
 export GHOST_ADMIN_KEY="<id>:<hex-secret>"
 export GHOST_LIVE_TEST=1
 pytest -q test_ghost_publisher.py -k live
 ```
 
-## Publishing an article manually (end-to-end smoke)
+## Foundation smoke test
 
-Assumes (a) a Ghost instance is configured, (b) an Article exists in the DB
-with `editorial_verdict = 'PUBLISH'`.
+A working setup should respond to all of these:
+
+```bash
+# Backend health
+curl -s http://127.0.0.1:5000/api/blog/dashboard/stats | python -m json.tool
+curl -s http://127.0.0.1:5000/api/budget/status | python -m json.tool
+
+# Create a niche → auto-triggers the legacy NichePipelineService which
+# scaffolds 5 mock products + articles in the background
+curl -s -X POST http://127.0.0.1:5000/api/blog/niches \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Cybersecurity SMB","description":"smoke","target_keywords":"vpn,smb"}'
+
+# List articles (filter + pagination)
+curl -s "http://127.0.0.1:5000/api/blog/articles?current_stage=awaiting_human_review&limit=20"
+
+# PATCH partial update
+curl -s -X PATCH http://127.0.0.1:5000/api/blog/articles/1 \
+  -H "Content-Type: application/json" \
+  -d '{"meta_description":"updated"}'
+
+# Stage outputs (after the editor has run)
+curl -s http://127.0.0.1:5000/api/blog/articles/1/stage-outputs | python -m json.tool
+
+# Soft-delete (sets status='archived'; ?hard=1 for true delete)
+curl -s -X DELETE http://127.0.0.1:5000/api/blog/articles/1
+```
+
+### Run the editor on a stored article
+
+The four-axis editor isn't an HTTP endpoint yet (PR #6 is the review UI
+that exposes it). Drive it from a Python shell against the running app:
+
+```bash
+python -c "
+from src.main import create_app
+from src.services.editorial_review import run_editorial_review
+app = create_app()
+with app.app_context():
+    v = run_editorial_review(<article_id>)
+    print(v.verdict, v.blocking_axes)
+"
+```
+
+Expected side-effects on the Article row:
+
+- `editorial_verdict` = `PUBLISH` or `REJECT`
+- `current_stage` = `awaiting_human_review`
+- `stage_status` = `complete`
+- `last_verdict_json` populated
+- `blueprint_id` set (DB blueprint if one exists for the niche, else PR #2 stub)
+- An `editorial_reports` row written
+
+## Publishing an article (manual)
+
+Requires a configured Ghost instance and an Article with
+`editorial_verdict='PUBLISH'`.
+
 ```bash
 # Health check (verifies Ghost auth without publishing)
-curl -X GET http://localhost:5001/api/publisher/health
+curl -X GET http://127.0.0.1:5000/api/publisher/health
 
 # Publish
-curl -X POST http://localhost:5001/api/publisher/publish/<article_id>
+curl -X POST http://127.0.0.1:5000/api/publisher/publish/<article_id>
 
 # Save as a draft instead
-curl -X POST http://localhost:5001/api/publisher/draft/<article_id>
+curl -X POST http://127.0.0.1:5000/api/publisher/draft/<article_id>
 ```
 
-Successful publish returns:
-```json
-{
-  "success": true,
-  "article_id": 1,
-  "post_id": "abc123",
-  "url": "https://your-ghost.example.com/best-vpn/",
-  "ghost_status": "published"
-}
-```
-
-The Article row will also have `ghost_post_id`, `published_url`, and
-`status='published'` persisted.
+PR #6 will move publish out of the API layer and behind the human-in-the-
+loop UI.
 
 ## Useful env vars
 
-| Var                | Purpose                                 |
-|--------------------|-----------------------------------------|
-| `GHOST_API_URL`    | Base URL of the Ghost blog              |
-| `GHOST_ADMIN_KEY`  | Admin API key in `id:hexsecret` form    |
-| `GHOST_LIVE_TEST`  | `1` to enable the live smoke test       |
-| `OPENAI_API_KEY`   | Content generator + embeddings          |
-| `TAVILY_API_KEY`   | ResearchCrew                            |
-| `SERPER_API_KEY`   | ResearchCrew                            |
-| `FIRECRAWL_API_KEY`| ResearchCrew                            |
-| `REDIS_HOST`       | Agent pub/sub (defaults to localhost)   |
-| `REDIS_PORT`       | Defaults to 6379                        |
+| Var                 | What it unlocks                                                                                              |
+|---------------------|--------------------------------------------------------------------------------------------------------------|
+| `GHOST_API_URL`     | Base URL of the Ghost blog                                                                                   |
+| `GHOST_ADMIN_KEY`   | Admin API key in `id:hexsecret` form                                                                         |
+| `GHOST_LIVE_TEST`   | `1` to enable the live-Ghost pytest                                                                          |
+| `OPENAI_API_KEY`    | Real CrewAI generation; LLM-injectable Editor axes; OpenAI embeddings via `make_openai_embedder()`           |
+| `TAVILY_API_KEY`    | ResearchCrew tools                                                                                           |
+| `SERPER_API_KEY`    | PR #5a SERP forensics. Without it, Stage 0.5 falls back to the most-recent DB blueprint or the PR #2 stub.   |
+| `FIRECRAWL_API_KEY` | Cleaner HTML extraction during Blueprint refresh; plain `requests.get` is the fallback                       |
+| `LANCEDB_PATH`      | Where PR #5b's LanceDB tables live (default `./data/lancedb`)                                                |
+| `REDIS_HOST`        | Optional — only the legacy agent framework needs it                                                          |
+| `REDIS_PORT`        | Defaults to 6379                                                                                             |
 
 ## Rolling back a PR
 
-Every apply script backs up modified files to `.pr1-backup/` (or `.prN-backup/`)
-preserving the original path. To revert:
+Every PR backs up its rewritten files to `.prN-backup/` preserving the
+original path. To revert PR N's local changes (e.g. `pr3-observability`):
+
 ```bash
-cp -r .pr1-backup/* .
+cp -r .pr3-backup/* .
+FLASK_APP=src.main:create_app flask db downgrade <prev-revision>
 ```
+
+## Known foundation gotchas
+
+- **`redis` package not in `requirements.txt`.** `create_app()` logs
+  `⚠️ Agent Manager initialization failed: No module named 'redis'` and
+  serves requests fine. PR #2–#5b doesn't use the agent framework. Add
+  `pip install redis` if you want it.
+- **Niche creation auto-fires `NichePipelineService`.** `POST /api/blog/niches`
+  scaffolds 5 mock products + 5 articles in the background (legacy
+  behavior, predates this PR series). Tests use isolated in-memory DBs
+  so it's hermetic for them, but a clean dev DB will not stay clean.
+- **The editorial_review path isn't an HTTP endpoint yet.** PR #6 wires
+  it. Today, drive it from a Python shell (recipe above).
+- **`USE_MOCK_DATA = True`** in `src/config.py`. Trend analyzer + content
+  generator return canned strings without real API calls. Flip to `False`
+  with the appropriate keys set when you want real generation.
