@@ -198,51 +198,14 @@ test_observability.py test_article_crud.py test_serp_forensics.py` →
 
 ---
 
-## PR #5b — LanceDB retrieval unification  ✅ SHIPPED
+## PR #5b — LanceDB retrieval unification  ⬜
 
-**Goal:** retire token-overlap, route every retrieval call through one
-LanceDB-backed hybrid (vector + BM25) interface, and ship an eval harness
-that lets us measure quality before merging future retrieval changes.
-
-- [x] `services/retrieval.py` — single `retrieve(query, collection, k,
-      filters)` surface backed by LanceDB. Hybrid merge is reciprocal-
-      rank fusion (constant 60) with the doc-spec 0.7/0.3 vector/lexical
-      weights. Embedder is injectable: `make_hash_embedder()` for tests
-      (deterministic, network-free), `make_openai_embedder()` for prod
-      (auto-records cost via PR #3's CostMeter).
-- [x] Four collections: `docs`, `profiles`, `research_harvest`,
-      `own_articles`. One LanceDB table per collection, lazily created
-      on first ingest. FTS index on `text` lazily created on first
-      query; falls back to vector-only if the LanceDB build doesn't
-      support FTS.
-- [x] Chunker: split markdown on H2 boundaries, ~400-800 word target with
-      50-token overlap; sliding window for over-target sections; HTML
-      input gets tags stripped first.
-- [x] Ingestion API: `ingest_doc(path, text)` / `reindex_docs(root)` /
-      `ingest_profile(profile, query)` / `ingest_research(article_id,
-      harvest)` / `ingest_own_article(article_id, title, body)`. Insert-
-      or-replace by stable id so re-ingesting the same source doesn't
-      duplicate.
-- [x] `knowledge_base.py` is now a thin shim over `retrieval` —
-      `KnowledgeBase.retrieve()` delegates to `retrieve(..., "docs",
-      ...)`. The token-overlap code is gone; the public surface is
-      preserved so existing CrewAI agents don't break.
-- [x] `eval/retrieval_eval.py` — token-overlap baseline (kept inline so
-      the eval is the single source of truth for "the old behavior"),
-      `compare_baseline_vs_hybrid` runner, nDCG@8 + Recall@8 metrics.
-      Designed to run two ways: in-test with the hash embedder for
-      structural CI, or `python -m eval.retrieval_eval` against the real
-      `/docs` corpus with OpenAI embeddings for the human's
-      pre-merge review.
-- [x] `test_retrieval.py` — 8 cases: chunker round-trips H2-split content,
-      huge-section sliding window, ingest + exact-text retrieval, ingest
-      replaces (no duplicates), filter narrowing by `niche_id`, eval
-      hybrid ≥ baseline assertion, plus standalone metric/baseline sanity.
-
-**Acceptance:**
-`pytest -q test_ghost_publisher.py test_editor_verdict.py
-test_observability.py test_article_crud.py test_serp_forensics.py
-test_retrieval.py test_knowledge_base.py` → 44 passed, 1 skipped.
+- [ ] `services/retrieval.py` — single `retrieve(query, collection, k, filters)`
+      surface backed by LanceDB + BM25 hybrid.
+- [ ] Collections: `docs`, `profiles`, `research_harvest`, `own_articles`.
+- [ ] Remove naive token-overlap retrieval from `knowledge_base.py`.
+- [ ] `eval/retrieval_eval.py` — 20-query nDCG@8 / Recall@8 vs baseline.
+      If retrieval doesn't beat baseline, stop and ask before merging.
 
 ---
 
