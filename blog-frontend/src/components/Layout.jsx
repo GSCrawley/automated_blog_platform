@@ -9,7 +9,9 @@ import {
   Menu,
   X,
   TrendingUp,
-  Target
+  Target,
+  Inbox,
+  Globe,
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -20,6 +22,8 @@ const Layout = ({ children }) => {
     { name: 'Dashboard', href: '/', icon: BarChart3 },
     { name: 'Products', href: '/products', icon: Package },
     { name: 'Articles', href: '/articles', icon: FileText },
+    { name: 'Review Queue', href: '/review', icon: Inbox },
+    { name: 'Published', href: '/published', icon: Globe },
     { name: 'Niches', href: '/niches', icon: Target },
     { name: 'Analytics', href: '/analytics', icon: TrendingUp },
     { name: 'Settings', href: '/settings', icon: Settings },

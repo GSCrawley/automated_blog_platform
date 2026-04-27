@@ -7,32 +7,16 @@ Required env vars (read lazily so import never fails):
     GHOST_API_URL    e.g. https://apex.yourghostblog.com
     GHOST_ADMIN_KEY  e.g. 6827abc...:deadbeef...   (id:secret, hex)
 
-PR #6 additions:
-
-- :meth:`GhostService.fetch_post`  — pull live post JSON for drift check.
-- :meth:`GhostService.set_status`  — flip published <-> draft without
-                                     touching content.
-- :func:`compute_content_hash`     — sha256 of the normalized payload
-                                     (title + html + meta_description
-                                     + sorted tags). The review UI uses
-                                     this for "is this still in sync?"
-                                     comparisons.
-- :func:`extract_ghost_payload`    — pull a comparable subset of fields
-                                     from a Ghost post dict so drift
-                                     detection has stable input.
-
-A small in-process post cache keeps fan-out drift checks from hammering
-the Ghost API.
+Returns the live post URL on success so pipeline tasks of the form
+'publish and return live URL' resolve deterministically.
 """
 from __future__ import annotations
 
-import hashlib
 import logging
 import os
-import threading
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Iterable, Optional
 
 import jwt  # PyJWT
 import requests
@@ -107,48 +91,11 @@ class GhostService:
         updated_at = current["posts"][0]["updated_at"]
         post = self._article_to_post(article, status="published")
         post["updated_at"] = updated_at
-        result = self._send(
+        return self._send(
             "PUT",
             f"/ghost/api/admin/posts/{post_id}/",
             {"posts": [post]},
         )
-        # Update bumped the post — invalidate any cached fetch.
-        _invalidate_post_cache(self.api_url, post_id)
-        return result
-
-    def fetch_post(self, post_id: str, *, use_cache: bool = True) -> Dict[str, Any]:
-        """Return the full Ghost post JSON for ``post_id`` (PR #6).
-
-        Cached for 60 seconds per (api_url, post_id) so drift fan-out from
-        the dashboard doesn't hammer the API. Pass ``use_cache=False`` for
-        the explicit-refresh path.
-        """
-        if use_cache:
-            cached = _get_cached_post(self.api_url, post_id)
-            if cached is not None:
-                return cached
-        body = self._get(f"/ghost/api/admin/posts/{post_id}/")
-        post = body["posts"][0]
-        _set_cached_post(self.api_url, post_id, post)
-        return post
-
-    def set_status(self, post_id: str, status: str) -> PublishResult:
-        """Flip ``status`` (published | draft | scheduled) without changing
-        content (PR #6 §6.1)."""
-        current = self.fetch_post(post_id, use_cache=False)
-        body = {
-            "posts": [
-                {
-                    "status": status,
-                    "updated_at": current["updated_at"],
-                }
-            ]
-        }
-        result = self._send(
-            "PUT", f"/ghost/api/admin/posts/{post_id}/", body
-        )
-        _invalidate_post_cache(self.api_url, post_id)
-        return result
 
     # ---- internals ----------------------------------------------------------
     def _create(self, article: dict, status: str) -> PublishResult:
@@ -248,122 +195,4 @@ class GhostService:
         )
 
 
-# ---------------------------------------------------------------------------
-# Drift detection helpers (PR #6)
-# ---------------------------------------------------------------------------
-
-
-def compute_content_hash(
-    *,
-    title: Optional[str],
-    html: Optional[str],
-    meta_description: Optional[str],
-    tags: Iterable[Any],
-) -> str:
-    """Return a stable ``sha256:<hex>`` of the normalized post payload.
-
-    Drift detection is "do these hashes match?" — same hash on both sides
-    means local and Ghost are in sync. The hash is computed over the
-    fields the review UI actually displays + edits, so cosmetic Ghost
-    metadata churn (revision numbers, last_seen_at) doesn't trigger
-    false drift.
-    """
-    sorted_tags = ",".join(
-        sorted(
-            (t.get("name") if isinstance(t, dict) else str(t)) or ""
-            for t in (tags or [])
-        )
-    )
-    blob = "\n".join(
-        [
-            (title or "").strip(),
-            (html or "").strip(),
-            (meta_description or "").strip(),
-            sorted_tags,
-        ]
-    )
-    return "sha256:" + hashlib.sha256(blob.encode("utf-8")).hexdigest()
-
-
-def extract_ghost_payload(post: Dict[str, Any]) -> Dict[str, Any]:
-    """Pull the comparable subset of fields from a Ghost post dict.
-
-    Ghost responses carry many fields (mobiledoc, lexical, custom_excerpt,
-    feature_image_caption, etc.) we don't track. This narrows it to what
-    drift detection looks at.
-    """
-    return {
-        "title": post.get("title") or "",
-        "html": post.get("html") or "",
-        "meta_description": post.get("meta_description") or "",
-        "tags": [
-            {"name": t.get("name") if isinstance(t, dict) else str(t)}
-            for t in (post.get("tags") or [])
-        ],
-        "status": post.get("status"),
-        "updated_at": post.get("updated_at"),
-        "url": post.get("url"),
-    }
-
-
-def diff_payloads(
-    local: Dict[str, Any], ghost: Dict[str, Any]
-) -> List[str]:
-    """Return the list of fields that differ between two extracted payloads."""
-    diverging: List[str] = []
-    for key in ("title", "html", "meta_description"):
-        if (local.get(key) or "") != (ghost.get(key) or ""):
-            diverging.append(key)
-    local_tags = {t.get("name") for t in local.get("tags") or [] if isinstance(t, dict)}
-    ghost_tags = {t.get("name") for t in ghost.get("tags") or [] if isinstance(t, dict)}
-    if local_tags != ghost_tags:
-        diverging.append("tags")
-    return diverging
-
-
-# ---------------------------------------------------------------------------
-# In-process post cache (60-second TTL)
-# ---------------------------------------------------------------------------
-
-_POST_CACHE_TTL_S = 60.0
-_post_cache: Dict[Tuple[str, str], Tuple[float, Dict[str, Any]]] = {}
-_post_cache_lock = threading.Lock()
-
-
-def _get_cached_post(api_url: str, post_id: str) -> Optional[Dict[str, Any]]:
-    key = (api_url, post_id)
-    with _post_cache_lock:
-        entry = _post_cache.get(key)
-    if entry is None:
-        return None
-    inserted_at, post = entry
-    if time.monotonic() - inserted_at > _POST_CACHE_TTL_S:
-        return None
-    return post
-
-
-def _set_cached_post(api_url: str, post_id: str, post: Dict[str, Any]) -> None:
-    with _post_cache_lock:
-        _post_cache[(api_url, post_id)] = (time.monotonic(), post)
-
-
-def _invalidate_post_cache(api_url: str, post_id: str) -> None:
-    with _post_cache_lock:
-        _post_cache.pop((api_url, post_id), None)
-
-
-def clear_post_cache() -> None:
-    """Test helper — drop the entire cache."""
-    with _post_cache_lock:
-        _post_cache.clear()
-
-
-__all__ = [
-    "GhostService",
-    "GhostPublishError",
-    "PublishResult",
-    "compute_content_hash",
-    "extract_ghost_payload",
-    "diff_payloads",
-    "clear_post_cache",
-]
+__all__ = ["GhostService", "GhostPublishError", "PublishResult"]

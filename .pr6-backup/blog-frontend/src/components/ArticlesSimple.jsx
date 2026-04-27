@@ -614,15 +614,6 @@ const ArticlesSimple = () => {
                         >
                           🔍 Details
                         </Link>
-                        {verdict === 'PUBLISH' && (
-                          <Link
-                            to={`/review/${article.id}`}
-                            className="text-green-700 hover:text-green-900 mr-3 font-medium"
-                            title="Review and publish to Ghost (PR #6 — only publish path)"
-                          >
-                            ✅ Review &amp; Publish
-                          </Link>
-                        )}
                         <Link
                           to={`/articles/${article.id}/editor`}
                           className="text-purple-600 hover:text-purple-900 mr-3 font-medium"

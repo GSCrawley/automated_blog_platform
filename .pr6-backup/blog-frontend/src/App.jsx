@@ -5,9 +5,6 @@ import ProductApproval from './components/ProductApproval'
 import ArticlesSimple from './components/ArticlesSimple'
 import ArticleDetail from './components/ArticleDetail'
 import ArticleEditor from './components/ArticleEditor'
-import ReviewQueue from './components/ReviewQueue'
-import ArticleReview from './components/ArticleReview'
-import PublishedArticles from './components/PublishedArticles'
 import NichesSimple from './components/NichesSimple'
 import Settings from './components/Settings'
 import ApiTest from './components/ApiTest'
@@ -30,9 +27,6 @@ function App() {
               <Route path="/products" element={<ProductsSimple />} />
               <Route path="/articles" element={<ArticlesSimple />} />
               <Route path="/articles/:id" element={<ArticleDetail />} />
-              <Route path="/review" element={<ReviewQueue />} />
-              <Route path="/review/:id" element={<ArticleReview />} />
-              <Route path="/published" element={<PublishedArticles />} />
               <Route path="/niches" element={<NichesSimple />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/api-test" element={<ApiTest />} />

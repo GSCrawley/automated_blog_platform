@@ -4,26 +4,16 @@ Endpoints (all under /api/publisher):
     POST /publish/<article_id>   -> publish or update on Ghost
     POST /draft/<article_id>     -> create as draft on Ghost
     GET  /health                 -> verify config + auth without publishing
-
-PR #6 extracts the publish logic into :func:`publish_article_now` so
-``routes/review.py``'s ``POST /api/review/<id>/publish`` and
-``POST /api/review/<id>/push-to-ghost`` can share the same code path.
 """
 from __future__ import annotations
 
 import logging
-from datetime import datetime
-from typing import Any, Dict
 
 from flask import Blueprint, jsonify
 
 from src.models.product import Article
 from src.models.user import db
-from src.services.ghost_service import (
-    GhostPublishError,
-    GhostService,
-    compute_content_hash,
-)
+from src.services.ghost_service import GhostPublishError, GhostService
 
 logger = logging.getLogger(__name__)
 publisher_bp = Blueprint("publisher", __name__)
@@ -48,72 +38,6 @@ def _refuse_unless_publishable(article: Article):
     return None
 
 
-def publish_article_now(
-    article: Article,
-    *,
-    enforce_verdict_gate: bool = True,
-) -> Dict[str, Any]:
-    """Push the Article to Ghost and persist the result.
-
-    Shared by ``POST /api/publisher/publish/<id>`` and PR #6's
-    ``POST /api/review/<id>/publish`` / ``push-to-ghost`` so the publish
-    semantics live in one place.
-
-    Returns the response body shape both routes return on success.
-    Raises :class:`GhostPublishError` (caller maps to 502) or
-    :class:`PermissionError` when the verdict gate refuses (caller maps to
-    409).
-    """
-    if enforce_verdict_gate:
-        if (article.editorial_verdict or "PENDING").upper() != "PUBLISH":
-            raise PermissionError(
-                f"Article {article.id} editorial_verdict is "
-                f"{article.editorial_verdict!r}; refusing to publish."
-            )
-
-    payload = article.to_headless_contract()
-    svc = GhostService()
-    if article.ghost_post_id:
-        result = svc.update_article(article.ghost_post_id, payload)
-    else:
-        result = svc.publish_article(payload)
-
-    # Build the post HTML the same way GhostService does so the sync hash
-    # matches what we just sent.
-    post = svc._article_to_post(payload, status="published")
-    sync_hash = compute_content_hash(
-        title=post.get("title"),
-        html=post.get("html"),
-        meta_description=post.get("meta_description"),
-        tags=post.get("tags") or [],
-    )
-
-    article.ghost_post_id = result.post_id
-    article.published_url = result.url
-    article.status = "published"
-    article.current_stage = "published"
-    article.last_ghost_sync_hash = sync_hash
-    article.has_unpushed_changes = False
-    if result.updated_at:
-        try:
-            # Ghost returns ISO-8601 with milliseconds and a Z suffix.
-            article.ghost_updated_at = datetime.fromisoformat(
-                result.updated_at.replace("Z", "+00:00")
-            )
-        except (TypeError, ValueError):
-            article.ghost_updated_at = None
-    db.session.commit()
-
-    return {
-        "success": True,
-        "article_id": article.id,
-        "post_id": result.post_id,
-        "url": result.url,
-        "ghost_status": result.status,
-        "last_sync_hash": sync_hash,
-    }
-
-
 @publisher_bp.route("/health", methods=["GET"])
 def health():
     try:
@@ -132,13 +56,31 @@ def publish(article_id: int):
     if refusal is not None:
         return refusal
 
+    payload = article.to_headless_contract()
     try:
-        body = publish_article_now(article)
+        svc = GhostService()
+        if article.ghost_post_id:
+            result = svc.update_article(article.ghost_post_id, payload)
+        else:
+            result = svc.publish_article(payload)
     except GhostPublishError as e:
         logger.exception("Ghost publish failed for article %s", article_id)
         return jsonify({"success": False, "error": str(e)}), 502
 
-    return jsonify(body)
+    article.ghost_post_id = result.post_id
+    article.published_url = result.url
+    article.status = "published"
+    db.session.commit()
+
+    return jsonify(
+        {
+            "success": True,
+            "article_id": article.id,
+            "post_id": result.post_id,
+            "url": result.url,
+            "ghost_status": result.status,
+        }
+    )
 
 
 @publisher_bp.route("/draft/<int:article_id>", methods=["POST"])

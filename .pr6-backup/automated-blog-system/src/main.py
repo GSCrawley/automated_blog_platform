@@ -117,13 +117,6 @@ def create_app():
     except Exception as e:
         print(f"❌ Error registering budget blueprint: {e}")
 
-    try:
-        from src.routes.review import review_bp
-        app.register_blueprint(review_bp, url_prefix='/api/review')
-        print("✅ Review blueprint registered successfully")
-    except Exception as e:
-        print(f"❌ Error registering review blueprint: {e}")
-
 
     # Serve React Frontend
     @app.route('/', defaults={'path': ''})

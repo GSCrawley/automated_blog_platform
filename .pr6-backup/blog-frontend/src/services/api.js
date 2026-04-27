@@ -189,76 +189,6 @@ export const budgetApi = {
   getStatus: () => request('/budget/status'),
 };
 
-/**
- * @typedef {Object} ReviewQueueItem
- * @property {number} id
- * @property {string} title
- * @property {number} niche_id
- * @property {string} niche_name
- * @property {('PUBLISH'|'REJECT'|'PENDING')} editorial_verdict
- * @property {string} current_stage
- * @property {number} word_count
- * @property {string} cost_usd
- * @property {string} blueprint_id
- * @property {string} updated_at
- * @property {{verdict?: string, blueprint_id?: string, axis_scores?: Object}} editorial_report_summary
- */
-
-/**
- * @typedef {Object} GhostDriftReport
- * @property {Object} local                  Headless-contract from local DB
- * @property {Object} ghost                  Subset of fields pulled from Ghost
- * @property {boolean} drift_detected
- * @property {string[]} diverging_fields     ['title' | 'html' | 'meta_description' | 'tags']
- * @property {string} local_hash
- * @property {string} ghost_hash
- * @property {string?} last_sync_hash
- */
-
-/**
- * PR #6 — human-in-the-loop review + publish surface. Every Ghost write
- * goes through here; the legacy ``publisherApi.publish`` is preserved for
- * tests but deprecated for UI use.
- */
-export const reviewApi = {
-  /**
-   * @param {{niche_id?: number, editorial_verdict?: 'PUBLISH'|'REJECT', limit?: number, offset?: number, sort?: 'updated_at'|'cost_usd'}} [filters]
-   * @returns {Promise<{success: boolean, articles: ReviewQueueItem[], total: number, limit: number, offset: number}>}
-   */
-  getQueue: (filters) => request(`/review/queue${qs(filters)}`),
-
-  /** Full payload the review screen needs in one round-trip. */
-  getArticle: (id) => request(`/review/${id}`),
-
-  /**
-   * Local-only edit before publish. Accepts any subset of:
-   * title, slug, content, sections, summary, meta_description, keywords,
-   * calls_to_action, meta.feature_image, meta.meta_title.
-   * @returns {Promise<Object>} Same shape as ``getArticle``.
-   */
-  patch: (id, body) => request(`/review/${id}`, {
-    method: 'PATCH', body: JSON.stringify(body),
-  }),
-
-  /** Human-triggered publish to Ghost. Refuses if verdict !== 'PUBLISH'. */
-  publish: (id) => request(`/review/${id}/publish`, { method: 'POST' }),
-
-  /** Set Ghost post to status='draft'. */
-  unpublish: (id) => request(`/review/${id}/unpublish`, { method: 'POST' }),
-
-  /**
-   * Pull live Ghost state and compute drift against local.
-   * @returns {Promise<GhostDriftReport & {success: boolean}>}
-   */
-  ghostSnapshot: (id) => request(`/review/${id}/ghost`),
-
-  /** Overwrite local with Ghost's current version (snapshots local first). */
-  pullFromGhost: (id) => request(`/review/${id}/pull-from-ghost`, { method: 'POST' }),
-
-  /** Push local edits to Ghost (snapshots Ghost first). Verdict-gated. */
-  pushToGhost: (id) => request(`/review/${id}/push-to-ghost`, { method: 'POST' }),
-};
-
 /** Publisher (PR #1). */
 export const publisherApi = {
   health: () => request('/publisher/health'),
@@ -303,7 +233,6 @@ export default {
   blogApi,
   budgetApi,
   publisherApi,
-  reviewApi,
   userApi,
   automationApi,
   analyticsApi,

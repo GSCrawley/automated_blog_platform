@@ -103,4 +103,34 @@ class EditorialReport(db.Model):
         }
 
 
-__all__ = ["CostEvent", "Budget", "EditorialReport"]
+class ArticleRevision(db.Model):
+    """Snapshot of an Article taken before an irreversible Ghost operation
+    (PR #6).
+
+    ``source`` describes what was about to happen — ``pre_pull_from_ghost``,
+    ``pre_push_to_ghost``, ``pre_manual_edit``. ``snapshot_json`` is the
+    full ``Article.to_dict()`` result at that moment; the review UI uses
+    this for revert + side-by-side diffs.
+    """
+
+    __tablename__ = "article_revisions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    article_id = db.Column(
+        db.Integer, db.ForeignKey("articles.id"), nullable=False, index=True
+    )
+    source = db.Column(db.String(40), nullable=False)
+    snapshot_json = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "article_id": self.article_id,
+            "source": self.source,
+            "snapshot_json": self.snapshot_json,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+__all__ = ["CostEvent", "Budget", "EditorialReport", "ArticleRevision"]
