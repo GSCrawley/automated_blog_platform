@@ -328,8 +328,11 @@ def test_stage_outputs_persist_across_pipeline(app):
     assert refreshed.strategy_json is not None
     assert refreshed.draft_sections_json is not None
     assert refreshed.last_verdict_json is not None
-    # stage 3 also flips current_stage to awaiting_human_review (PR #2 invariant).
+    # stage 3 also flips current_stage to awaiting_human_review (PR #2 invariant)
+    # and bumps stage_status to 'complete' so the dashboard / queue see the
+    # right state (foundation-cleanup fix; smoke-test caught this).
     assert refreshed.current_stage == "awaiting_human_review"
+    assert refreshed.stage_status == "complete"
 
     # Editorial report row exists too (PR #3 normalization).
     reports = EditorialReport.query.filter_by(article_id=article.id).all()
