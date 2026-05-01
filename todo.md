@@ -332,33 +332,3 @@ sooner.
 Multi-niche calibration, Ghost newsletter/member flows, multi-blog fan-out,
 SaaS multi-tenant, social repurposing — only after the feedback loop has
 shown it actually moves the needle.
-
----
-
-## Known issues / cleanup backlog
-
-### Alembic autogenerate produces phantom diffs (discovered in PR #6.4)
-
-**Symptom:** `flask db migrate` proposes to drop `blueprints` and
-`serp_profiles` tables and rewrite indexes on `article_revisions` / `budgets`
-even when none of those models have changed.
-
-**Root cause:** `migrations/env.py` reads `db.metadata` for the target
-metadata, but the `BlueprintRow`/`SerpProfile` model modules
-(`src.models.pattern_library`) and similar are not imported at autogenerate
-time. When a model module isn't imported, its tables aren't on
-`db.metadata.tables`, so autogenerate compares the live DB (which has those
-tables from migrations 0003/0004) against an incomplete metadata snapshot
-and proposes drops.
-
-**Workaround used in PR #6.4:** hand-trim the autogenerate output before
-applying. See
-`migrations/versions/65ce81a88136_pr_6_4_add_affiliate_url_and_tracking_.py`
-for an example.
-
-**Proper fix (one small PR):** in `migrations/env.py`, add explicit imports
-for every `src.models.*` module so all `db.Model` subclasses register with
-`db.metadata` before `target_metadata = db.metadata` is read. Then
-`flask db migrate` against an up-to-date DB should produce empty
-upgrade()/downgrade() bodies. Until this lands, every future autogenerate
-run requires the same manual scrub step.
