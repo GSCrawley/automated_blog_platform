@@ -5,6 +5,20 @@ from flask import current_app
 
 from alembic import context
 
+# Import every model module so all db.Model subclasses register on
+# db.metadata before Alembic reads target_metadata. Without these imports,
+# autogenerate compares the live DB against an incomplete metadata snapshot
+# and proposes phantom drops of tables it can't see (e.g. blueprints,
+# serp_profiles). Discovered during the PR #6.4 audit.
+from src.models import (  # noqa: F401
+    agent_models,
+    niche,
+    observability,
+    pattern_library,
+    product,
+    user,
+)
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
