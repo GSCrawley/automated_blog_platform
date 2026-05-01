@@ -196,8 +196,13 @@ class NichePipelineService:
         return created_products
 
     def _get_niche_products(self, niche) -> List[Dict[str, Any]]:
-        """
-        Try OpenAI-powered discovery first; fall back to template-based mock.
+        """Try OpenAI-powered discovery first; only fall back to templates if
+        explicitly enabled via PIPELINE_ALLOW_TEMPLATE_FALLBACK=true.
+
+        PR #6.4 — The template fallback used to silently seed wellness
+        products into any niche that didn't match health/tech/finance keywords.
+        That's how a Home Office niche ended up with whey protein. The
+        fallback is now opt-in.
         """
         from src.config import Config
 
@@ -205,9 +210,29 @@ class NichePipelineService:
             try:
                 return self._discover_products_with_ai(niche)
             except Exception as exc:
-                logger.warning(f"AI product discovery failed, using templates: {exc}")
+                logger.warning(f"AI product discovery failed: {exc}")
+                if not Config.PIPELINE_ALLOW_TEMPLATE_FALLBACK:
+                    raise
+                logger.warning(
+                    "Falling back to templates because "
+                    "PIPELINE_ALLOW_TEMPLATE_FALLBACK=true. This will likely "
+                    "produce off-niche products."
+                )
+                return self._discover_products_from_templates(niche)
 
-        return self._discover_products_from_templates(niche)
+        # No OPENAI_API_KEY.
+        if Config.PIPELINE_ALLOW_TEMPLATE_FALLBACK:
+            logger.warning(
+                "OPENAI_API_KEY not set; using template fallback because "
+                "PIPELINE_ALLOW_TEMPLATE_FALLBACK=true."
+            )
+            return self._discover_products_from_templates(niche)
+        raise RuntimeError(
+            "OPENAI_API_KEY is not set and PIPELINE_ALLOW_TEMPLATE_FALLBACK "
+            "is false. Cannot discover products. Either set OPENAI_API_KEY in "
+            ".env or set PIPELINE_ALLOW_TEMPLATE_FALLBACK=true to opt into "
+            "the (off-niche) template path for development."
+        )
 
     def _discover_products_with_ai(self, niche) -> List[Dict[str, Any]]:
         """Use OpenAI to generate niche-specific product recommendations."""
@@ -307,45 +332,80 @@ Return ONLY a valid JSON array of 5 product objects, no other text."""
     # -------------------------------------------------------------------------
 
     def _generate_articles(self, niche, products, db) -> list:
-        """Generate an SEO-optimized article for each product."""
-        from src.models.product import Article
-        from src.services.content_generator import ContentGenerator
+        """Generate articles by invoking the real CrewAI BlogCreationFlow for
+        each product. Each article is created as a stub row in stage_0; the
+        flow advances it through Research → Strategy → Creation → Editorial
+        and leaves it at `awaiting_human_review` with editorial_verdict set.
+        The human (via /api/review/...) is the gate that promotes an article
+        to PUBLISH and triggers Ghost publication.
 
-        generator = ContentGenerator()
+        PR #6.4 — Replaces the legacy single-shot ContentGenerator path.
+        """
+        from src.models.product import Article
+
+        # Lazy import — keeps Flask startup fast and avoids importing CrewAI
+        # if the pipeline never runs.
+        try:
+            from core.crewai_system.blog_creation_flow import BlogCreationFlow
+        except ImportError:
+            logger.error(
+                "Cannot import BlogCreationFlow from core/crewai_system. "
+                "Ensure the project root is on sys.path (it is added by "
+                "src/main.py:create_app)."
+            )
+            raise
+
         created_articles = []
 
         for product in products:
-            # Skip if article already exists
-            existing = Article.query.filter_by(product_id=product.id, niche_id=niche.id).first()
+            existing = Article.query.filter_by(
+                product_id=product.id, niche_id=niche.id
+            ).first()
             if existing:
                 created_articles.append(existing)
                 continue
 
-            product_data = product.to_dict()
-            # Ensure the niche context is available to the generator
-            product_data["niche_name"] = niche.name
-            product_data["niche_keywords"] = niche.target_keywords or ""
-
-            article_data = generator.generate_article(product_data)
-
+            # Stage-0 stub. BlogCreationFlow fills in title/content/
+            # research_report_json/strategy_json/draft_sections_json/
+            # editorial_verdict via persist_stage_output.
             article = Article(
-                title=article_data["title"],
-                content=article_data["content"],
-                meta_description=article_data.get("meta_description", ""),
-                keywords=json.dumps(article_data.get("keywords", [])),
+                title=f"[draft] {product.name}",
+                content="",
+                meta_description="",
+                keywords=product.primary_keywords or "[]",
                 product_id=product.id,
                 niche_id=niche.id,
-                seo_score=article_data.get("seo_score", 0),
-                readability_score=article_data.get("readability_score", 0),
-                word_count=len(article_data.get("content", "").split()),
-                affiliate_links_count=article_data.get("affiliate_links_count", 0),
                 status="draft",
+                current_stage="stage_0",
+                stage_status="pending",
             )
             db.session.add(article)
             db.session.flush()
+
+            try:
+                flow = BlogCreationFlow()
+                flow.kickoff(
+                    inputs={
+                        "niche": niche.name,
+                        "blog_instance_id": str(niche.id),
+                        "current_article_id": article.id,
+                        "current_topic": product.name,
+                    }
+                )
+                logger.info(
+                    f"BlogCreationFlow completed for article {article.id} "
+                    f"(product: {product.name})"
+                )
+            except Exception as exc:
+                logger.exception(
+                    f"BlogCreationFlow failed for article {article.id} "
+                    f"(product: {product.name}): {exc}"
+                )
+                article.last_error = str(exc)[:1000]
+                article.stage_status = "error"
+
             created_articles.append(article)
 
-            # Update pipeline message with progress
             niche.pipeline_message = (
                 f"Generated {len(created_articles)}/{len(products)} articles..."
             )

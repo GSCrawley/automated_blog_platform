@@ -23,6 +23,9 @@ yarn-error.log
 *.sqlite3
 *.rdb
 
+# PR #6.4 — persistent SQLite + CrewAI memory dir
+automated-blog-system/data/
+
 # IDE files
 .idea/
 .vscode/
