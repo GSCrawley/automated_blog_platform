@@ -21,6 +21,9 @@ class Product(db.Model):
     secondary_keywords = db.Column(db.Text)  # JSON string
     source_url = db.Column(db.String(500))
     image_url = db.Column(db.String(500))
+    # PR #6.4 — affiliate link wiring
+    affiliate_url = db.Column(db.String(500))   # raw affiliate destination URL
+    tracking_id = db.Column(db.String(50))      # e.g. "deskcred-20" for Amazon Associates
     niche_id = db.Column(db.Integer, db.ForeignKey('niches.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -43,6 +46,8 @@ class Product(db.Model):
             'secondary_keywords': json.loads(self.secondary_keywords) if self.secondary_keywords else [],
             'source_url': self.source_url,
             'image_url': self.image_url,
+            'affiliate_url': self.affiliate_url,
+            'tracking_id': self.tracking_id,
             'niche_id': self.niche_id,
             'niche_name': self.niche.name if self.niche else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
@@ -133,18 +138,40 @@ class Article(db.Model):
         }
     
     def to_headless_contract(self):
-        """Return the article in the Headless Article Contract shape
-        consumed by GhostService.publish_article()."""
+        """Return the article in the Headless Article Contract shape consumed
+        by GhostService.publish_article().
+
+        PR #6.4 — calls_to_action is now populated from the linked Product's
+        affiliate_url + tracking_id. If the product has no affiliate_url, no
+        CTA is emitted (so the article still publishes, just without a link).
+        """
         keywords = json.loads(self.keywords) if self.keywords else []
+
+        ctas = []
+        if self.product and self.product.affiliate_url:
+            target = self.product.affiliate_url
+            # If a tracking_id is set and the URL doesn't already contain it,
+            # append it as a query param. We default to ?tag=<id> because
+            # deskcred-20 is Amazon Associates format. A future PR will detect
+            # the affiliate network properly (CJ, Impact, ShareASale use
+            # different param names like 'subid' or 'sid').
+            if self.product.tracking_id and "tag=" not in target:
+                separator = "&" if "?" in target else "?"
+                target = f"{target}{separator}tag={self.product.tracking_id}"
+            ctas.append({
+                "type": "affiliate",
+                "target": target,
+                "anchor": f"Check current price on {self.product.name}",
+            })
+
         return {
             "id": self.id,
             "title": self.title,
-            # GhostService uses 'sections' if present, else falls back to 'content'.
             "content": self.content,
             "sections": [],
             "summary": (self.meta_description or "")[:300],
             "keywords": keywords,
-            "calls_to_action": [],
+            "calls_to_action": ctas,
             "meta": {
                 "meta_title": self.title,
                 "meta_description": self.meta_description,

@@ -17,11 +17,14 @@ import responses
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
-os.environ.setdefault("GHOST_API_URL", "https://ghost.test.local")
-os.environ.setdefault(
-    "GHOST_ADMIN_KEY",
-    "0123456789abcdef01234567:" + "a" * 64,
-)
+# Mocked tests need a deterministic URL so `responses` can match. PR #6.4
+# added .env auto-loading via conftest.py, which means GHOST_API_URL is now
+# pre-populated from the real .env at import time — `setdefault` would be a
+# no-op and the mock URL would not match the real one. Force the test URL
+# unless we're running the live test (where the real env values are needed).
+if os.environ.get("GHOST_LIVE_TEST") != "1":
+    os.environ["GHOST_API_URL"] = "https://ghost.test.local"
+    os.environ["GHOST_ADMIN_KEY"] = "0123456789abcdef01234567:" + "a" * 64
 
 from src.main import create_app  # noqa: E402
 from src.models.niche import Niche  # noqa: E402
