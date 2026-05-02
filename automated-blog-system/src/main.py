@@ -11,17 +11,19 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), '..'
 from flask import Flask, send_from_directory, request, jsonify
 from flask_cors import CORS
 from flask_migrate import Migrate
-from src.config import Config
+from src.config import Config, TestConfig
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def create_app():
+def create_app(testing: bool = False):
     # Set static_folder to the built React app directory
     app = Flask(__name__, static_folder='../static', static_url_path='/')
-    app.config.from_object(Config)
-    Config.init_app(app)
+    cfg = TestConfig if testing else Config
+    app.config.from_object(cfg)
+    if not testing:
+        Config.init_app(app)
 
     # Initialize database
     from src.models.user import db
