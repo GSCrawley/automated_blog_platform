@@ -22,7 +22,14 @@ def create_app(testing: bool = False):
     app = Flask(__name__, static_folder='../static', static_url_path='/')
     cfg = TestConfig if testing else Config
     app.config.from_object(cfg)
-    if not testing:
+    if testing:
+        # Mirror TestConfig overrides onto the Config class so that services
+        # which read Config.* directly (not current_app.config) also see the
+        # test values and don't accidentally call real OpenAI / enable the
+        # template fallback path.
+        Config.OPENAI_API_KEY = TestConfig.OPENAI_API_KEY
+        Config.PIPELINE_ALLOW_TEMPLATE_FALLBACK = TestConfig.PIPELINE_ALLOW_TEMPLATE_FALLBACK
+    else:
         Config.init_app(app)
 
     # Initialize database
@@ -47,33 +54,38 @@ def create_app(testing: bool = False):
     )
     Migrate(app, db, directory=migrations_dir)
 
-    # Initialize Agent Manager (attached to app for route access)
-    try:
-        # Import from core directory (relative to project root)
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        core_agents_path = os.path.join(project_root, 'core')
-        if core_agents_path not in sys.path:
-            sys.path.insert(0, core_agents_path)
+    # Initialize Agent Manager (attached to app for route access).
+    # Skipped in testing mode — Redis I/O and background threads are
+    # non-deterministic side effects that have no place in unit/integration tests.
+    if not testing:
+        try:
+            # Import from core directory (relative to project root)
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            core_agents_path = os.path.join(project_root, 'core')
+            if core_agents_path not in sys.path:
+                sys.path.insert(0, core_agents_path)
 
-        from agents.agent_manager import AgentManager
-        app.agent_manager = AgentManager(
-            redis_host=app.config.get('REDIS_HOST', 'localhost'),
-            redis_port=app.config.get('REDIS_PORT', 6379)
-        )
-        print("✅ Agent Manager initialized successfully")
+            from agents.agent_manager import AgentManager
+            app.agent_manager = AgentManager(
+                redis_host=app.config.get('REDIS_HOST', 'localhost'),
+                redis_port=app.config.get('REDIS_PORT', 6379)
+            )
+            print("✅ Agent Manager initialized successfully")
 
-        # Start agents in a background thread so they run alongside Flask
-        import threading
-        agent_thread = threading.Thread(
-            target=app.agent_manager.start_monitoring_loop,
-            name="AgentManagerMonitor",
-            daemon=True
-        )
-        agent_thread.start()
-        print("✅ Agent system started in background")
-    except Exception as e:
-        print(f"⚠️ Agent Manager initialization failed: {e}")
-        print("   Agent routes will use mock data fallback")
+            # Start agents in a background thread so they run alongside Flask
+            import threading
+            agent_thread = threading.Thread(
+                target=app.agent_manager.start_monitoring_loop,
+                name="AgentManagerMonitor",
+                daemon=True
+            )
+            agent_thread.start()
+            print("✅ Agent system started in background")
+        except Exception as e:
+            print(f"⚠️ Agent Manager initialization failed: {e}")
+            print("   Agent routes will use mock data fallback")
+            app.agent_manager = None
+    else:
         app.agent_manager = None
 
     # Register blueprints with debug prints
