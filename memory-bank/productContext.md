@@ -1,112 +1,47 @@
-# Product Context - Automated Blog Platform
+# Product Context — automated_blog_platform
+
+> Updated 2026-06-01. Reflects the current Ghost / PR-based system.
 
 ## Why This Project Exists
 
-The affiliate marketing and content creation landscape is fragmented and labor-intensive. Successful affiliate blogs require:
-- Continuous market research and trend analysis
-- High-quality, SEO-optimized content creation
-- Technical WordPress management and optimization
-- Strategic product selection and placement
-- Multi-platform coordination and scaling
+Successful affiliate blogs need continuous market research, high-quality
+SEO content, strategic product placement, and disciplined editorial QA.
+Doing this by hand caps output and quality. This system automates the
+pipeline end-to-end up to a human approval gate, then learns from what
+actually earns.
 
-Manual execution of these tasks creates bottlenecks that limit growth and profitability across multiple niches.
+## What Makes It Different
 
-## Problems This System Solves
+Most "AI blog" tools optimize prose. This system optimizes **conformance
+to an empirically-winning blueprint** for the target query. The Editor
+asks "does this article match the blueprint that wins this SERP?" — a
+deterministic, measurable question — and prose quality is a side-check,
+not the main rubric.
 
-### For Content Creators & Marketers
-- **Time Bottleneck**: Manual content creation limits output to 1-2 articles per week
-- **Market Blindness**: Missing trending products and opportunities in fast-moving markets
-- **SEO Complexity**: Difficulty maintaining technical SEO across multiple sites
-- **Scaling Limitations**: Cannot effectively manage multiple niches simultaneously
-- **WordPress Overhead**: Technical site management consumes valuable time
-- **Inconsistent Quality**: Variable content quality affects search rankings and conversions
+## How It Should Work (happy path)
 
-### For Niche Market Exploitation
-- **Research Inefficiency**: Manual trend analysis misses profitable opportunities
-- **Competitive Lag**: Slow response to market changes allows competitors to dominate
-- **Product Selection Errors**: Poor affiliate product choices reduce conversion rates
-- **Cross-Niche Complexity**: Managing different markets requires specialized knowledge
-- **Revenue Optimization**: Suboptimal monetization strategies across different niches
+1. User declares a niche (name, description, target keywords, monetization).
+2. The pipeline discovers Amazon products for that niche and drafts an
+   article per product through the 5-stage CrewAI flow.
+3. SERP Forensics (PR #5a) builds/refreshes a Blueprint for the target
+   query; the Editor scores the draft against it on four axes
+   (Conformance / Content Quality / Monetization / Compliance) and emits a
+   binary `EditorialVerdict` (`PUBLISH` | `REJECT`).
+4. Every article lands in the **human review queue** (PR #6). A human edits
+   and clicks Publish; only then does it reach Ghost.
+5. After ≥20 published articles, the Performance Feedback Loop (PR #7,
+   planned) correlates real GSC + affiliate performance back to blueprint
+   fields and surfaces blueprint-update *proposals* (never auto-applied).
 
-## How The System Works
+## Monetization
 
-### Autonomous Content Pipeline
-1. **Market Intelligence**: Agents continuously monitor trends in specified niches
-2. **Product Discovery**: AI identifies high-potential affiliate products automatically
-3. **Content Strategy**: System plans content calendar based on market opportunities
-4. **Content Generation**: Automated creation of SEO-optimized articles and reviews
-5. **WordPress Publishing**: Automatic posting with proper optimization and formatting
-6. **Performance Monitoring**: Real-time tracking of traffic, rankings, and conversions
+Amazon Associates. Each `Product` carries an `affiliate_url` and a
+`tracking_id` (e.g. `deskcred-20`); `CallToAction.build_target()` appends
+`tag=<tracking_id>` to the destination URL so every affiliate link is
+correctly attributed.
 
-### Multi-Niche Orchestration
-- **Niche Analysis**: System evaluates market potential and competition levels
-- **Resource Allocation**: Intelligent distribution of content creation across niches
-- **Cross-Niche Learning**: Successful strategies transfer between similar markets
-- **Portfolio Management**: Balanced approach across multiple revenue streams
+## KPIs
 
-### User Interaction Model
-- **Setup Phase**: User defines target niches and high-level preferences
-- **Approval Workflow**: System requests approval for major strategy changes
-- **Monitoring Dashboard**: Real-time visibility into all blog performance
-- **Revenue Optimization**: Continuous refinement based on performance data
-
-## User Experience Goals
-
-### Primary User (Blog Owner/Marketer)
-**Daily Experience**:
-- Check dashboard for performance summaries (5 minutes)
-- Review and approve major content strategies (10-15 minutes)
-- Monitor revenue and conversion metrics (5 minutes)
-- Minimal technical intervention required
-
-**Weekly Experience**:
-- Review system recommendations for new niches or products
-- Analyze performance reports and growth opportunities
-- Adjust high-level strategy parameters if needed
-
-**Monthly Experience**:
-- Comprehensive performance review across all managed blogs
-- Strategic planning for niche expansion or optimization
-- System optimization and agent fine-tuning
-
-### Secondary Users (Technical Teams)
-- **Simplified Deployment**: Easy setup and configuration for new blog instances
-- **Monitoring Tools**: Comprehensive system health and performance tracking
-- **Debugging Interface**: Clear visibility into agent decisions and actions
-- **Scalability Management**: Tools for managing multiple blog deployments
-
-## Success Indicators
-
-### User Satisfaction Metrics
-- **Time Savings**: 90%+ reduction in manual content management time
-- **Revenue Growth**: Consistent month-over-month affiliate income increases
-- **System Reliability**: 99%+ uptime for automated processes
-- **User Confidence**: High approval rates for system-generated content strategies
-
-### Business Impact Metrics
-- **Content Volume**: 10x increase in publishable content output
-- **SEO Performance**: Improved search rankings across all managed niches
-- **Conversion Optimization**: Higher affiliate conversion rates through better product targeting
-- **Market Responsiveness**: Faster identification and exploitation of trending opportunities
-
-## Value Proposition
-
-### Immediate Benefits
-- **Automated Revenue Generation**: Passive income from multiple affiliate niches
-- **Market Opportunity Capture**: Never miss trending products or market shifts
-- **Professional Content Quality**: Consistent, SEO-optimized content across all blogs
-- **Technical Management**: WordPress optimization without technical expertise
-
-### Long-term Strategic Value
-- **Scalable Business Model**: Easy expansion into new profitable niches
-- **Competitive Advantage**: AI-driven insights and faster market response
-- **Portfolio Diversification**: Risk reduction through multi-niche revenue streams
-- **Learning Organization**: System improves performance over time
-
-### Unique Differentiators
-- **Niche Agnostic**: Works across any profitable market vertical
-- **Agent Intelligence**: Specialized AI for each aspect of blog management
-- **Full Automation**: Complete pipeline from research to publication
-- **Human-AI Collaboration**: Strategic oversight with operational autonomy
-
-This product context establishes the foundation for user-centered design decisions and feature prioritization throughout the development process.
+Tracked in `GOALS.md` — organic impressions/clicks, affiliate EPC/revenue,
+newsletter opt-in rate (Ghost's built-in member tooling), and per-article
+ROI (revenue vs. CostMeter spend from PR #3).

@@ -19,13 +19,30 @@ const NichesSimple = () => {
   const [deleting, setDeleting] = useState(null);
   const [editingNiche, setEditingNiche] = useState(null);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [runningPipelineFor, setRunningPipelineFor] = useState(null);
 
   useEffect(() => {
     fetchNiches();
   }, []);
 
-  const fetchNiches = async () => {
-    setLoading(true);
+  // Keep niche statuses fresh while a pipeline is running.
+  useEffect(() => {
+    const hasRunningPipeline = niches.some(
+      (n) => n.pipeline_status === 'discovering_products' || n.pipeline_status === 'generating_articles'
+    );
+    if (!hasRunningPipeline || showAddForm || showEditForm) return;
+
+    const id = setInterval(() => {
+      fetchNiches({ silent: true });
+    }, 5000);
+    return () => clearInterval(id);
+  }, [niches, showAddForm, showEditForm]);
+
+  const fetchNiches = async ({ silent = false } = {}) => {
+    if (!silent) {
+      setLoading(true);
+    }
     try {
       const data = await blogApi.getNiches();
       if (data.success) {
@@ -36,7 +53,9 @@ const NichesSimple = () => {
     } catch {
       setError('Error fetching niches. Please try again.');
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -82,13 +101,17 @@ const NichesSimple = () => {
 
       if (response.success) {
         setNiches(prev => [...prev, response.niche]);
+        setSuccessMessage('Niche saved. Pipeline started in the background.');
         resetForm();
         setError(null);
       } else {
         setError('Failed to create niche: ' + (response.error || 'Unknown error'));
+        setSuccessMessage('');
       }
-    } catch {
-      setError('Error creating niche. Please try again.');
+    } catch (err) {
+      setError('Error creating niche. Check backend/API URL and try again.');
+      setSuccessMessage('');
+      console.error('Error creating niche:', err);
     } finally {
       setSubmitting(false);
     }
@@ -122,13 +145,37 @@ const NichesSimple = () => {
       if (response.success) {
         setNiches(prev => prev.filter(n => n.id !== niche.id));
         setError(null);
+        setSuccessMessage('Niche deleted.');
       } else {
         setError('Failed to delete niche: ' + (response.error || 'Unknown error'));
+        setSuccessMessage('');
       }
-    } catch {
+    } catch (err) {
       setError('Error deleting niche. Please try again.');
+      setSuccessMessage('');
+      console.error('Error deleting niche:', err);
     } finally {
       setDeleting(null);
+    }
+  };
+
+  const handleRunPipeline = async (nicheId) => {
+    setRunningPipelineFor(nicheId);
+    setError(null);
+    setSuccessMessage('');
+    try {
+      const response = await blogApi.runNichePipeline(nicheId);
+      if (response.success) {
+        setSuccessMessage('Pipeline started. Products and articles will appear as it completes.');
+        fetchNiches();
+      } else {
+        setError('Failed to start pipeline: ' + (response.error || 'Unknown error'));
+      }
+    } catch (err) {
+      setError('Error starting pipeline. Check backend and try again.');
+      console.error('Error starting niche pipeline:', err);
+    } finally {
+      setRunningPipelineFor(null);
     }
   };
 
@@ -228,6 +275,17 @@ const NichesSimple = () => {
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Niches</h1>
         <p className="text-gray-600 mb-4">Manage your content niches and market segments.</p>
+
+        {error && (
+          <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            {error}
+          </div>
+        )}
+        {successMessage && (
+          <div className="mb-4 bg-green-100 border border-green-400 text-green-800 px-4 py-3 rounded">
+            {successMessage}
+          </div>
+        )}
 
         <div className="flex gap-4 mb-4">
           <button
@@ -495,6 +553,7 @@ const NichesSimple = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profitability</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Competition</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pipeline</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -550,7 +609,35 @@ const NichesSimple = () => {
                         {niche.competition_level}
                       </span>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        niche.pipeline_status === 'completed' ? 'bg-green-100 text-green-800' :
+                        niche.pipeline_status === 'error' ? 'bg-red-100 text-red-800' :
+                        niche.pipeline_status === 'discovering_products' || niche.pipeline_status === 'generating_articles'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {niche.pipeline_status || 'idle'}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button
+                        onClick={() => handleRunPipeline(niche.id)}
+                        disabled={
+                          runningPipelineFor === niche.id ||
+                          niche.pipeline_status === 'discovering_products' ||
+                          niche.pipeline_status === 'generating_articles'
+                        }
+                        className={`mr-3 ${
+                          runningPipelineFor === niche.id ||
+                          niche.pipeline_status === 'discovering_products' ||
+                          niche.pipeline_status === 'generating_articles'
+                            ? 'text-gray-400 cursor-not-allowed'
+                            : 'text-blue-600 hover:text-blue-900'
+                        }`}
+                      >
+                        {runningPipelineFor === niche.id ? '⏳ Starting...' : '▶️ Run'}
+                      </button>
                       <button
                         onClick={() => handleEdit(niche)}
                         className="text-indigo-600 hover:text-indigo-900 mr-3"
