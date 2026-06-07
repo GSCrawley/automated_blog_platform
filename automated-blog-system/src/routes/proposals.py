@@ -121,8 +121,9 @@ def accept_proposal(proposal_id: int):
         proposed = proposal.proposed_value()
         _apply_proposal_to_blueprint(blueprint, proposal.blueprint_field, proposed)
 
-        # Assign a new unique ID so persist_blueprint doesn't hit a UNIQUE constraint.
-        blueprint.id = f"bp_niche{proposal.niche_id}_{uuid.uuid4().hex[:8]}"
+        # Assign a new unique ID consistent with _suggest_blueprint_id's format.
+        stamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        blueprint.id = f"bp_niche{proposal.niche_id}_{stamp}_{uuid.uuid4().hex[:4]}"
 
         new_row = persist_blueprint(
             blueprint,

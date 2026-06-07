@@ -683,31 +683,20 @@ def dismiss_improvement(article_id: int, proposal_id: int):
 
 
 def _build_patch_from_proposal(proposal, article: Article) -> dict:
-    """Translate a proposal's recommended_value into a PATCH body."""
-    field = proposal.blueprint_field
-    recommended = proposal.recommended_value()
+    """Translate a proposal's recommended_value into a PATCH body.
 
-    if field == "word_count_range":
-        # Can't directly set word count without rewriting content; skip —
-        # this surfaces as a reminder rather than an auto-patch.
-        return {}
-    if field == "h2_count_range":
-        # Same — structural content change; surface as reminder.
-        return {}
-    if field == "has_comparison_table":
-        # If recommended True and article lacks one, we can't auto-insert.
-        return {}
-    if field == "has_faq":
-        return {}
-    if field == "requires_feature_image":
-        if recommended and not article.meta_description:
-            return {}  # nothing to patch without an actual URL
-        return {}
-    if field == "requires_schema_markup":
-        return {}
-    if field == "min_internal_links":
-        return {}
-    return {}
+    All Blueprint fields that improvement proposals operate on require
+    substantive content rewrites that cannot be auto-applied (word count,
+    H2 structure, FAQ insertion, comparison table, image assets, schema
+    markup). This function intentionally returns an empty dict for every
+    field: the ``apply`` route marks the proposal applied and sets
+    ``has_unpushed_changes = True`` to signal the human editor that
+    attention is needed, but the actual edit remains the human's
+    responsibility. The proposal card in ArticleReview.jsx shows the
+    current vs recommended value so the editor knows exactly what to change.
+    """
+    # All current Blueprint fields require human content edits — see docstring.
+    return {}  # noqa: RET504
 
 
 __all__ = ["review_bp", "publish_article_now"]

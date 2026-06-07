@@ -20,13 +20,20 @@ Design for testability:
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
+import time
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import Dict, Iterator, List, Optional
 
 import requests
+
+try:
+    import jwt as pyjwt
+except ImportError:
+    pyjwt = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -146,14 +153,13 @@ class GSCProvider:
             logger.debug("GSC credentials file not found at %r", self._credentials_file)
             return None
         try:
-            import json as _json
-
             with open(self._credentials_file) as fh:
-                creds = _json.load(fh)
+                creds = json.load(fh)
 
             # Build a JWT assertion for service-account auth.
-            import time
-            import jwt as pyjwt
+            if pyjwt is None:
+                logger.warning("PyJWT not installed; GSC auth unavailable. pip install PyJWT")
+                return None
 
             now = int(time.time())
             payload = {

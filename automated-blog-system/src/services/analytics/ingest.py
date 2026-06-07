@@ -22,6 +22,7 @@ Key design decisions:
 from __future__ import annotations
 
 import logging
+import os
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Dict, List, Optional
@@ -329,7 +330,5 @@ def run_daily_ingest(
         "performance_rows": perf_written,
     }
 
-
-import os  # noqa: E402 — placed at bottom to avoid circular import issues
 
 __all__ = ["run_daily_ingest", "refresh_performance", "_upsert_analytics_rows"]
