@@ -16,8 +16,10 @@ import {
   Settings,
   Plus,
   Inbox,
+  Lightbulb,
+  BarChart2,
 } from 'lucide-react'
-import { blogApi, automationApi } from '@/services/api'
+import { blogApi, automationApi, proposalsApi, analyticsApi } from '@/services/api'
 
 /**
  * Dashboard (PR #4).
@@ -38,6 +40,9 @@ const Dashboard = () => {
     next_run: null,
   })
   const [loading, setLoading] = useState(true)
+  const [pendingProposals, setPendingProposals] = useState(0)
+  const [topArticles, setTopArticles] = useState([])
+  const [niches, setNiches] = useState([])
 
   useEffect(() => {
     refresh()
@@ -47,14 +52,20 @@ const Dashboard = () => {
   const refresh = async () => {
     setLoading(true)
     try {
-      const [statsRes, queueRes, recentRes] = await Promise.all([
+      const [statsRes, queueRes, recentRes, proposalsRes, topRes, nichesRes] = await Promise.all([
         blogApi.getDashboardStats(),
         blogApi.getArticles({ current_stage: 'awaiting_human_review', limit: 50 }),
         blogApi.getArticles({ limit: 5 }),
+        proposalsApi.list({ status: 'pending', limit: 1 }).catch(() => ({ total: 0 })),
+        analyticsApi.getTopArticles().catch(() => ({ articles: [] })),
+        analyticsApi.getRevenueByNiche().catch(() => ({ niches: [] })),
       ])
       if (statsRes.success) setStats(statsRes.stats)
       if (queueRes.success) setReviewQueue(queueRes.articles || [])
       if (recentRes.success) setRecentArticles(recentRes.articles || [])
+      setPendingProposals(proposalsRes.total || (proposalsRes.proposals || []).length || 0)
+      setTopArticles(topRes.articles || [])
+      setNiches(nichesRes.niches || [])
     } catch (err) {
       console.error('Error refreshing dashboard:', err)
     } finally {
@@ -202,6 +213,140 @@ const Dashboard = () => {
         </Card>
       </div>
 
+      {/* PR #7 analytics KPIs — shown only when data is available */}
+      {(topArticles.length > 0 || pendingProposals > 0 || niches.length > 0) && (
+        <div className="grid gap-4 md:grid-cols-3">
+          {/* Revenue this month */}
+          {niches.length > 0 && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Revenue this month</CardTitle>
+                <DollarSign className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-700">
+                  ${niches.reduce((s, n) => s + (n.revenue_usd || 0), 0).toFixed(2)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  across {niches.length} niche{niches.length !== 1 ? 's' : ''}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Blueprint proposals badge */}
+          <Card className={pendingProposals > 0 ? 'border-yellow-400' : ''}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Blueprint Proposals</CardTitle>
+              <Lightbulb className={`h-4 w-4 ${pendingProposals > 0 ? 'text-yellow-500' : 'text-muted-foreground'}`} />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${pendingProposals > 0 ? 'text-yellow-600' : ''}`}>
+                {pendingProposals}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {pendingProposals > 0 ? (
+                  <Link to="/proposals" className="text-yellow-700 hover:underline font-medium">
+                    Review pending proposals →
+                  </Link>
+                ) : (
+                  'no proposals awaiting review'
+                )}
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Per-niche ROI sparkline */}
+          {niches.length > 0 && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">ROI by Niche</CardTitle>
+                <BarChart2 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-1.5">
+                  {niches.slice(0, 4).map((n) => {
+                    const roi = n.avg_roi ?? 0
+                    const pct = Math.min(Math.max(roi, 0), 500) / 5
+                    return (
+                      <div key={n.niche_id || n.niche_name} className="space-y-0.5">
+                        <div className="flex justify-between text-xs">
+                          <span className="truncate max-w-[120px]">{n.niche_name}</span>
+                          <span className={roi >= 0 ? 'text-green-600' : 'text-red-600'}>
+                            {roi >= 0 ? '+' : ''}{roi.toFixed(0)}%
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${roi >= 0 ? 'bg-green-500' : 'bg-red-400'}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* ROI Leaderboard */}
+      {topArticles.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-green-600" />
+              Top Articles by ROI
+            </CardTitle>
+            <CardDescription>Best-performing published articles based on 28-day revenue data.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {topArticles.slice(0, 10).map((a, i) => (
+                <div key={a.article_id || a.id} className="flex items-center gap-3 p-2 rounded border text-sm">
+                  <span className="text-muted-foreground font-mono text-xs w-5 shrink-0">{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <Link
+                      to={`/review/${a.article_id || a.id}`}
+                      className="font-medium truncate hover:underline block"
+                    >
+                      {a.title || a.article_title || `Article #${a.article_id || a.id}`}
+                    </Link>
+                    <p className="text-xs text-muted-foreground truncate">{a.niche_name || ''}</p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0 text-xs">
+                    {a.total_revenue_28d != null && (
+                      <span className="text-green-700">${Number(a.total_revenue_28d).toFixed(2)}</span>
+                    )}
+                    {a.roi != null && (
+                      <Badge variant={a.roi >= 0 ? 'default' : 'destructive'} className="text-xs">
+                        {a.roi >= 0 ? '+' : ''}{Number(a.roi).toFixed(0)}% ROI
+                      </Badge>
+                    )}
+                    {a.performance_tier && (
+                      <Badge
+                        variant={
+                          a.performance_tier === 'winner'
+                            ? 'default'
+                            : a.performance_tier === 'loser'
+                            ? 'destructive'
+                            : 'secondary'
+                        }
+                        className="text-xs"
+                      >
+                        {a.performance_tier}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Pipeline by stage */}
       <Card>
         <CardHeader>
@@ -290,6 +435,12 @@ const Dashboard = () => {
             )}
           </TabsTrigger>
           <TabsTrigger value="recent">Recent Articles</TabsTrigger>
+          {pendingProposals > 0 && (
+            <TabsTrigger value="proposals">
+              Blueprint Proposals
+              <Badge variant="secondary" className="ml-2">{pendingProposals}</Badge>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="queue" className="space-y-4">
@@ -386,6 +537,29 @@ const Dashboard = () => {
                   <p className="text-sm text-muted-foreground">No articles yet.</p>
                 )}
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Blueprint Proposals quick-view tab */}
+        <TabsContent value="proposals" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Blueprint Proposals Awaiting Review</CardTitle>
+              <CardDescription>
+                <Link to="/proposals" className="text-blue-600 hover:underline">
+                  Open full review screen →
+                </Link>
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                {pendingProposals} proposal{pendingProposals !== 1 ? 's' : ''} pending. Visit the{' '}
+                <Link to="/proposals" className="text-blue-600 hover:underline">
+                  Feedback Proposals
+                </Link>{' '}
+                screen to review and accept or reject them.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>

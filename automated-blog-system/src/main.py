@@ -44,6 +44,13 @@ def create_app(testing: bool = False):
     from src.models.niche import Niche
     from src.models.agent_models import AgentState, BlogInstance, AgentTask, AgentDecision
     from src.models.observability import CostEvent, Budget, EditorialReport  # PR #3
+    from src.models.analytics import (  # PR #7
+        ArticleAnalyticsDaily,
+        ArticlePerformance,
+        ArticleBlueprintSnapshot,
+        BlueprintProposal,
+        ArticleImprovementProposal,
+    )
 
     # Initialize Flask-Migrate (PR #3). The migrations/ directory lives at
     # automated-blog-system/migrations/ — relative to the working dir set by
@@ -137,6 +144,44 @@ def create_app(testing: bool = False):
         print("✅ Review blueprint registered successfully")
     except Exception as e:
         print(f"❌ Error registering review blueprint: {e}")
+
+    try:
+        from src.routes.proposals import proposals_bp
+        app.register_blueprint(proposals_bp, url_prefix='/api/proposals')
+        print("✅ Proposals blueprint registered successfully")
+    except Exception as e:
+        print(f"❌ Error registering proposals blueprint: {e}")
+
+    # PR #7 — daily analytics ingest job (APScheduler, fires at 06:00 local).
+    # Only started in production mode; tests inject providers directly.
+    if not testing:
+        try:
+            from apscheduler.schedulers.background import BackgroundScheduler
+
+            scheduler = BackgroundScheduler()
+
+            def _daily_ingest_job():
+                with app.app_context():
+                    from src.services.analytics.ingest import run_daily_ingest
+                    run_daily_ingest()
+
+            scheduler.add_job(
+                _daily_ingest_job,
+                trigger="cron",
+                hour=6,
+                minute=0,
+                id="daily_analytics_ingest",
+                replace_existing=True,
+            )
+            scheduler.start()
+            app.analytics_scheduler = scheduler
+            print("✅ Analytics ingest scheduler started (daily at 06:00)")
+        except ImportError:
+            print("⚠️  APScheduler not installed — analytics ingest scheduler not started")
+            app.analytics_scheduler = None
+        except Exception as e:
+            print(f"⚠️  Analytics scheduler failed to start: {e}")
+            app.analytics_scheduler = None
 
 
     # Serve React Frontend

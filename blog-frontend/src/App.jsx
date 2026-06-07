@@ -13,6 +13,7 @@ import Settings from './components/Settings'
 import ApiTest from './components/ApiTest'
 import ProductsSimple from './components/ProductsSimple'
 import Analytics from './components/Analytics'
+import FeedbackProposals from './components/FeedbackProposals'
 import './App.css'
 
 function App() {
@@ -38,6 +39,7 @@ function App() {
               <Route path="/api-test" element={<ApiTest />} />
               <Route path="/product-approval" element={<ProductApproval />} />
               <Route path="/analytics" element={<Analytics />} />
+              <Route path="/proposals" element={<FeedbackProposals />} />
             </Routes>
           </Layout>
         } />

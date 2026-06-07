@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { RefreshCw, ExternalLink, AlertCircle, CheckCircle2, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react'
-import { blogApi, reviewApi } from '@/services/api'
+import { RefreshCw, ExternalLink, AlertCircle, CheckCircle2, ArrowDownToLine, ArrowUpFromLine, Lightbulb } from 'lucide-react'
+import { blogApi, reviewApi, proposalsApi } from '@/services/api'
 
 /**
  * PublishedArticles (PR #6) — list of articles already on Ghost with
@@ -25,6 +25,7 @@ const PublishedArticles = () => {
   const [error, setError] = useState(null)
   const [driftMap, setDriftMap] = useState({})  // article_id -> {drift_detected, diverging_fields}
   const [busy, setBusy] = useState(null)        // article_id currently being pulled/pushed
+  const [improvMap, setImprovMap] = useState({}) // article_id -> pending improvement count
 
   const refresh = async () => {
     setLoading(true)
@@ -53,21 +54,36 @@ const PublishedArticles = () => {
     let cancelled = false
     ;(async () => {
       for (const a of items) {
-        if (cancelled || !a.ghost_post_id) continue
+        if (cancelled) return
+        if (a.ghost_post_id) {
+          try {
+            const data = await reviewApi.ghostSnapshot(a.id)
+            if (cancelled) return
+            if (data.success) {
+              setDriftMap((prev) => ({
+                ...prev,
+                [a.id]: {
+                  drift_detected: data.drift_detected,
+                  diverging_fields: data.diverging_fields,
+                },
+              }))
+            }
+          } catch {
+            // Ignore — leave the row without an indicator.
+          }
+        }
+        // Fetch pending improvement count for each article
         try {
-          const data = await reviewApi.ghostSnapshot(a.id)
+          const impData = await proposalsApi.getImprovements(a.id, { status: 'pending' })
           if (cancelled) return
-          if (data.success) {
-            setDriftMap((prev) => ({
+          if (impData.success) {
+            setImprovMap((prev) => ({
               ...prev,
-              [a.id]: {
-                drift_detected: data.drift_detected,
-                diverging_fields: data.diverging_fields,
-              },
+              [a.id]: (impData.proposals || []).length,
             }))
           }
         } catch {
-          // Ignore — leave the row without an indicator.
+          // Non-critical; omit badge if request fails.
         }
       }
     })()
@@ -232,6 +248,14 @@ const PublishedArticles = () => {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {driftIndicator(a)}
+                      {improvMap[a.id] > 0 && (
+                        <Link to={`/review/${a.id}`} title="Open improvement proposals">
+                          <Badge variant="outline" className="gap-1 border-yellow-400 text-yellow-700">
+                            <Lightbulb className="h-3 w-3" />
+                            {improvMap[a.id]} improvement{improvMap[a.id] !== 1 ? 's' : ''}
+                          </Badge>
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </CardHeader>

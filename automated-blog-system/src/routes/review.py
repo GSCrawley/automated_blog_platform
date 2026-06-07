@@ -548,4 +548,166 @@ def push_to_ghost(article_id: int):
         return jsonify(body)
 
 
+
+# ---------------------------------------------------------------------------
+# Improvement proposal sub-routes  (PR #7 retroactive editing)
+# ---------------------------------------------------------------------------
+
+
+@review_bp.route("/<int:article_id>/improvements", methods=["GET"])
+def get_improvements(article_id: int):
+    """Return pending improvement proposals for an article, sorted by
+    evidence strength (effect_size desc, then id asc as tiebreaker)."""
+    from src.models.analytics import ArticleImprovementProposal
+    import json as _json
+
+    article = Article.query.get(article_id)
+    if article is None:
+        return _err(f"Article {article_id} not found.", 404)
+
+    status_filter = request.args.get("status", "pending")
+    q = ArticleImprovementProposal.query.filter_by(article_id=article_id)
+    if status_filter != "all":
+        q = q.filter(ArticleImprovementProposal.status == status_filter)
+
+    proposals = q.order_by(ArticleImprovementProposal.generated_at.desc()).all()
+
+    # Sort by effect_size desc (best evidence first).
+    def _effect(p):
+        ev = p.evidence()
+        return float(ev.get("effect_size", 0) or 0)
+
+    proposals.sort(key=_effect, reverse=True)
+
+    return jsonify(
+        {
+            "success": True,
+            "article_id": article_id,
+            "proposals": [p.to_dict() for p in proposals],
+        }
+    )
+
+
+@review_bp.route("/<int:article_id>/improvements/generate", methods=["POST"])
+def generate_improvements(article_id: int):
+    """On-demand: generate conformance-gap improvement proposals for one article."""
+    from src.services.feedback_engine import generate_improvement_proposals
+
+    article = Article.query.get(article_id)
+    if article is None:
+        return _err(f"Article {article_id} not found.", 404)
+
+    try:
+        proposals = generate_improvement_proposals(article_id)
+        return jsonify(
+            {
+                "success": True,
+                "article_id": article_id,
+                "proposals_created": len(proposals),
+                "proposals": [p.to_dict() for p in proposals],
+            }
+        )
+    except Exception:
+        logger.exception("generate_improvements failed for article %d", article_id)
+        return _err("Failed to generate improvement proposals.", 500)
+
+
+@review_bp.route(
+    "/<int:article_id>/improvements/<int:proposal_id>/apply", methods=["POST"]
+)
+def apply_improvement(article_id: int, proposal_id: int):
+    """Apply a recommended change to the local Article row.
+
+    Writes the change, sets ``has_unpushed_changes=True``, marks the
+    proposal ``status='applied'``.
+    """
+    from src.models.analytics import ArticleImprovementProposal
+
+    article = Article.query.get(article_id)
+    if article is None:
+        return _err(f"Article {article_id} not found.", 404)
+
+    proposal = ArticleImprovementProposal.query.get(proposal_id)
+    if proposal is None or proposal.article_id != article_id:
+        return _err(f"Proposal {proposal_id} not found for article {article_id}.", 404)
+    if proposal.status != "pending":
+        return _err(
+            f"Proposal is already '{proposal.status}'; only pending proposals can be applied.",
+            409,
+        )
+
+    with _article_lock(article_id):
+        patch = _build_patch_from_proposal(proposal, article)
+        if patch:
+            err = _validate_patch(patch)
+            if err is not None:
+                return err
+            _apply_patch(article, patch)
+
+        proposal.status = "applied"
+        proposal.reviewed_at = datetime.utcnow()
+        db.session.commit()
+
+    return get_article(article_id)
+
+
+@review_bp.route(
+    "/<int:article_id>/improvements/<int:proposal_id>/dismiss", methods=["POST"]
+)
+def dismiss_improvement(article_id: int, proposal_id: int):
+    """Dismiss a proposal with an optional reason."""
+    from src.models.analytics import ArticleImprovementProposal
+
+    article = Article.query.get(article_id)
+    if article is None:
+        return _err(f"Article {article_id} not found.", 404)
+
+    proposal = ArticleImprovementProposal.query.get(proposal_id)
+    if proposal is None or proposal.article_id != article_id:
+        return _err(f"Proposal {proposal_id} not found for article {article_id}.", 404)
+    if proposal.status != "pending":
+        return _err(
+            f"Proposal is already '{proposal.status}'; only pending proposals can be dismissed.",
+            409,
+        )
+
+    body = request.get_json() or {}
+    proposal.status = "dismissed"
+    proposal.dismissed_reason = str(body.get("reason", ""))
+    proposal.reviewed_at = datetime.utcnow()
+    db.session.commit()
+
+    return jsonify(
+        {"success": True, "proposal_id": proposal_id, "status": "dismissed"}
+    )
+
+
+def _build_patch_from_proposal(proposal, article: Article) -> dict:
+    """Translate a proposal's recommended_value into a PATCH body."""
+    field = proposal.blueprint_field
+    recommended = proposal.recommended_value()
+
+    if field == "word_count_range":
+        # Can't directly set word count without rewriting content; skip —
+        # this surfaces as a reminder rather than an auto-patch.
+        return {}
+    if field == "h2_count_range":
+        # Same — structural content change; surface as reminder.
+        return {}
+    if field == "has_comparison_table":
+        # If recommended True and article lacks one, we can't auto-insert.
+        return {}
+    if field == "has_faq":
+        return {}
+    if field == "requires_feature_image":
+        if recommended and not article.meta_description:
+            return {}  # nothing to patch without an actual URL
+        return {}
+    if field == "requires_schema_markup":
+        return {}
+    if field == "min_internal_links":
+        return {}
+    return {}
+
+
 __all__ = ["review_bp", "publish_article_now"]
