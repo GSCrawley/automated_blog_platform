@@ -575,7 +575,7 @@ def get_improvements(article_id: int):
         ev = p.evidence()
         return float(ev.get("effect_size", 0) or 0)
 
-    proposals.sort(key=_effect, reverse=True)
+    proposals.sort(key=lambda p: (-_effect(p), p.id))
 
     return jsonify(
         {
