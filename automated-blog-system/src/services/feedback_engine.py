@@ -156,28 +156,6 @@ def _blueprint_field_recommendation(field: str, blueprint: BlueprintRow) -> Any:
 
 
 # ---------------------------------------------------------------------------
-# Patch BlueprintRow with a helper not in the original model
-# ---------------------------------------------------------------------------
-
-
-def _profile_aggregate_has(self, key: str) -> bool:
-    """Return the modal bool for a structural field from the aggregate JSON."""
-    try:
-        agg = json.loads(self.profile_aggregate or "{}")
-        val = agg.get(key)
-        if val is None:
-            return False
-        if isinstance(val, dict):
-            return bool(val.get("modal") or val.get("value") or val.get("mean", 0) >= 0.5)
-        return bool(val)
-    except (TypeError, ValueError):
-        return False
-
-
-BlueprintRow.profile_aggregate_has = _profile_aggregate_has
-
-
-# ---------------------------------------------------------------------------
 # HIGH-CONFIDENCE fields we check for conformance gaps
 # ---------------------------------------------------------------------------
 
