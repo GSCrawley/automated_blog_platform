@@ -559,8 +559,6 @@ def get_improvements(article_id: int):
     """Return pending improvement proposals for an article, sorted by
     evidence strength (effect_size desc, then id asc as tiebreaker)."""
     from src.models.analytics import ArticleImprovementProposal
-    import json as _json
-
     article = Article.query.get(article_id)
     if article is None:
         return _err(f"Article {article_id} not found.", 404)
