@@ -642,6 +642,12 @@ def apply_improvement(article_id: int, proposal_id: int):
                 return err
             _apply_patch(article, patch)
 
+        # PR #7 reminder-system behavior: mark local row as needing a push even
+        # when no auto-patch is performed.
+        if article.ghost_post_id:
+            article.has_unpushed_changes = True
+            article.updated_at = datetime.utcnow()
+
         proposal.status = "applied"
         proposal.reviewed_at = datetime.utcnow()
         db.session.commit()
