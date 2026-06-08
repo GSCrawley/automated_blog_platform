@@ -31,14 +31,11 @@ import json
 import logging
 import random
 import statistics
-from datetime import datetime
-from decimal import Decimal
 from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy import desc
+from sqlalchemy.exc import IntegrityError
 
 from src.models.analytics import (
-    ArticleBlueprintSnapshot,
     ArticleImprovementProposal,
     ArticlePerformance,
     BlueprintProposal,
@@ -290,7 +287,19 @@ def generate_improvement_proposals(
                 }
             ),
         )
-        db.session.add(proposal)
+
+        try:
+            with db.session.begin_nested():
+                db.session.add(proposal)
+                db.session.flush()
+        except IntegrityError:
+            logger.info(
+                "Skipping duplicate pending improvement proposal for article %d field %s",
+                article_id,
+                field,
+            )
+            continue
+
         created.append(proposal)
 
     if created:

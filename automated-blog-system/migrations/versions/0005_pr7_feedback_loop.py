@@ -169,6 +169,12 @@ def upgrade() -> None:
             server_default=sa.text("CURRENT_TIMESTAMP"),
         ),
         sa.Column("reviewed_at", sa.DateTime, nullable=True),
+        sa.UniqueConstraint(
+            "article_id",
+            "blueprint_field",
+            "status",
+            name="uq_improvement_proposals_article_field_status",
+        ),
     )
     op.create_index(
         "ix_improvement_proposals_article_status",

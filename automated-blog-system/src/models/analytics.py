@@ -275,12 +275,20 @@ class ArticleImprovementProposal(db.Model):
     high-confidence fields, and creates one row per gap.
 
     The human reviews these in the ArticleReview UI. On **Apply**, the
-    recommended change is written to the Article row (triggering autosave
-    and setting ``has_unpushed_changes``). On **Dismiss**, the row is
-    closed with an optional reason.
+    proposal is marked complete and Ghost-backed articles are flagged with
+    ``has_unpushed_changes`` so an editor can make the recommended content
+    change manually. On **Dismiss**, the row is closed with an optional reason.
     """
 
     __tablename__ = "article_improvement_proposals"
+    __table_args__ = (
+        UniqueConstraint(
+            "article_id",
+            "blueprint_field",
+            "status",
+            name="uq_improvement_proposals_article_field_status",
+        ),
+    )
 
     id = Column(Integer, primary_key=True)
     article_id = Column(Integer, ForeignKey("articles.id"), nullable=False, index=True)

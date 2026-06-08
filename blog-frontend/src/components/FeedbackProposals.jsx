@@ -16,8 +16,7 @@ import { proposalsApi, blogApi } from '@/services/api'
  *
  * On accept: the backend creates a new Blueprint version and fans out
  * per-article improvement proposals to all published articles in the niche.
- * A "View affected articles" link routes to the Published Articles list
- * filtered to that niche.
+ * A "View published articles" link routes to the Published Articles list.
  */
 const FeedbackProposals = () => {
   const [proposals, setProposals] = useState([])
@@ -257,7 +256,7 @@ const FeedbackProposals = () => {
                       {/* Affected articles link */}
                       {p.niche_id && tab === 'pending' && (
                         <Link
-                          to={`/published?niche_id=${p.niche_id}`}
+                          to="/published"
                           className="text-xs text-blue-600 hover:underline flex items-center gap-1"
                         >
                           <TrendingUp className="h-3 w-3" />

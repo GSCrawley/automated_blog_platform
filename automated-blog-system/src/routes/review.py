@@ -614,10 +614,10 @@ def generate_improvements(article_id: int):
     "/<int:article_id>/improvements/<int:proposal_id>/apply", methods=["POST"]
 )
 def apply_improvement(article_id: int, proposal_id: int):
-    """Apply a recommended change to the local Article row.
+    """Mark an improvement proposal applied for manual follow-up.
 
-    Writes the change, sets ``has_unpushed_changes=True``, marks the
-    proposal ``status='applied'``.
+    Applies any generated patch, sets ``has_unpushed_changes=True`` for
+    Ghost-backed articles, and marks the proposal ``status='applied'``.
     """
     from src.models.analytics import ArticleImprovementProposal
 

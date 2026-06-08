@@ -284,7 +284,6 @@ def run_daily_ingest(
 
     # Build tracking_id → article_id map from DB unless caller provides one.
     if tracking_id_map is None:
-        from src.models.product import Product
         tracking_id_map = {}
         for a in Article.query.filter(Article.status == "published").all():
             if a.product and a.product.tracking_id:

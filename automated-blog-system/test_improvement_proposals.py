@@ -26,6 +26,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = ROOT.parent
@@ -204,6 +205,25 @@ def test_duplicate_proposals_not_created(app, product, niche):
         article_id=a.id, blueprint_field="word_count_range"
     ).count()
     assert total == 1
+
+
+def test_pending_improvement_proposals_are_db_unique(app, product, niche):
+    """DB uniqueness prevents duplicate pending proposals for one field."""
+    proposal_data = {
+        "article_id": _article(product, niche, word_count=300).id,
+        "blueprint_field": "word_count_range",
+        "current_value_json": json.dumps(300),
+        "recommended_value_json": json.dumps([1500, 3000]),
+        "status": "pending",
+    }
+
+    db.session.add(ArticleImprovementProposal(**proposal_data))
+    db.session.commit()
+
+    db.session.add(ArticleImprovementProposal(**proposal_data))
+    with pytest.raises(IntegrityError):
+        db.session.commit()
+    db.session.rollback()
 
 
 # ---------------------------------------------------------------------------
