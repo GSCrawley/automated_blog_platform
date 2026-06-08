@@ -64,7 +64,7 @@ APIS=(
   cloudscheduler.googleapis.com    # Cloud Scheduler (automate pipeline runs)
 )
 for api in "${APIS[@]}"; do
-  info "Enabling $api…"
+  info "Enabling $api"
   "$GCLOUD" services enable "$api" --project="$PROJECT_ID" --quiet
 done
 ok "All APIs enabled"
@@ -80,6 +80,8 @@ else
     --display-name="$SA_DISPLAY" \
     --project="$PROJECT_ID"
   ok "Service account created: $SA_EMAIL"
+  info "Waiting for service account to propagate..."
+  sleep 15
 fi
 
 # Grant roles
@@ -90,7 +92,7 @@ ROLES=(
   roles/cloudscheduler.jobRunner   # Trigger scheduled jobs
 )
 for role in "${ROLES[@]}"; do
-  info "Granting $role…"
+  info "Granting $role"
   "$GCLOUD" projects add-iam-policy-binding "$PROJECT_ID" \
     --member="serviceAccount:${SA_EMAIL}" \
     --role="$role" \
