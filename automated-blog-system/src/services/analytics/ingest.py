@@ -9,10 +9,10 @@ Key design decisions:
   ``(article_id, date, source)`` triple key. The ingest function deletes
   the matching row (if any) and inserts the fresh one — SQLite-safe upsert.
 
-- **Conformance-gap proposals fire after every ingest**, not just after
-  20+ articles. A single well-crafted baseline article is enough to flag
-  non-conformant fields.
-
+- **Conformance-gap proposals can be generated on-demand** (per-article) or
+  triggered as a fan-out when a Blueprint proposal is accepted. A single
+  well-crafted baseline article is enough to flag non-conformant fields.
+  (The daily ingest job currently only upserts analytics + refreshes performance.)
 - **Statistical proposals** (effect-size based) require ``min_n`` articles
   per bucket. The default is ``3``; raise it per-niche once data grows.
 
