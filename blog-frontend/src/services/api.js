@@ -299,11 +299,42 @@ export const analyticsApi = {
   getTrafficSources: () => request('/analytics/traffic-sources'),
 };
 
+/**
+ * PR #7 — Blueprint proposals + per-article improvement proposals.
+ */
+export const proposalsApi = {
+  /**
+   * @param {{status?: 'pending'|'accepted'|'rejected', niche_id?: number, limit?: number, offset?: number}} [filters]
+   */
+  list: (filters) => request(`/proposals/${qs(filters)}`),
+  get: (id) => request(`/proposals/${id}`),
+  accept: (id) => request(`/proposals/${id}/accept`, { method: 'POST' }),
+  reject: (id, body = {}) => request(`/proposals/${id}/reject`, {
+    method: 'POST', body: JSON.stringify(body),
+  }),
+  generate: (nicheId, opts = {}) => request(`/proposals/generate/${nicheId}`, {
+    method: 'POST', body: JSON.stringify(opts),
+  }),
+
+  // Per-article improvement proposals
+  getImprovements: (articleId, filters) =>
+    request(`/review/${articleId}/improvements${qs(filters)}`),
+  generateImprovements: (articleId) =>
+    request(`/review/${articleId}/improvements/generate`, { method: 'POST' }),
+  applyImprovement: (articleId, proposalId) =>
+    request(`/review/${articleId}/improvements/${proposalId}/apply`, { method: 'POST' }),
+  dismissImprovement: (articleId, proposalId, reason = '') =>
+    request(`/review/${articleId}/improvements/${proposalId}/dismiss`, {
+      method: 'POST', body: JSON.stringify({ reason }),
+    }),
+};
+
 export default {
   blogApi,
   budgetApi,
   publisherApi,
   reviewApi,
+  proposalsApi,
   userApi,
   automationApi,
   analyticsApi,

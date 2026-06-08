@@ -4,8 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ArrowLeft, RefreshCw, Save, Send, FileX, ExternalLink, AlertCircle } from 'lucide-react'
-import { reviewApi } from '@/services/api'
+import { ArrowLeft, RefreshCw, Save, Send, FileX, ExternalLink, AlertCircle, Lightbulb, CheckCircle2, XCircle } from 'lucide-react'
+import { reviewApi, proposalsApi } from '@/services/api'
 
 /**
  * ArticleReview (PR #6) — the human-in-the-loop review + publish surface.
@@ -37,13 +37,18 @@ const ArticleReview = () => {
   const [publishing, setPublishing] = useState(false)
   const [confirmPublish, setConfirmPublish] = useState(false)
   const [toast, setToast] = useState(null)     // {kind, msg}
+  const [improvements, setImprovements] = useState([])
+  const [improvBusy, setImprovBusy] = useState(null)  // proposal id
   const lastSavedJSON = useRef('')
 
   const refresh = async () => {
     setLoading(true)
     setError(null)
     try {
-      const data = await reviewApi.getArticle(id)
+      const [data, impData] = await Promise.all([
+        reviewApi.getArticle(id),
+        proposalsApi.getImprovements(id).catch(() => ({ success: false, proposals: [] })),
+      ])
       if (data.success) {
         setBundle(data)
         const editable = {
@@ -57,6 +62,7 @@ const ArticleReview = () => {
       } else {
         setError(data.error || 'Failed to load article.')
       }
+      if (impData.success) setImprovements(impData.proposals || [])
     } catch (err) {
       setError(err.message || 'Network error.')
     } finally {
@@ -154,6 +160,60 @@ const ArticleReview = () => {
   const discard = () => {
     if (isDirty && !confirm('Discard unsaved changes?')) return
     refresh()
+  }
+
+  const applyImprovement = async (pid) => {
+    setImprovBusy(pid)
+    try {
+      const data = await proposalsApi.applyImprovement(id, pid)
+      if (data.success) {
+        showToast('success', 'Improvement applied — save and push to Ghost when ready.')
+        setBundle(data)
+        lastSavedJSON.current = JSON.stringify(draft)
+        const impData = await proposalsApi.getImprovements(id).catch(() => ({ proposals: [] }))
+        setImprovements(impData.proposals || [])
+      } else {
+        showToast('error', data.error || 'Apply failed.')
+      }
+    } catch (err) {
+      showToast('error', err.message || 'Apply failed.')
+    } finally {
+      setImprovBusy(null)
+    }
+  }
+
+  const dismissImprovement = async (pid) => {
+    const reason = prompt('Reason for dismissal (optional):') ?? ''
+    setImprovBusy(pid)
+    try {
+      const data = await proposalsApi.dismissImprovement(id, pid, reason)
+      if (data.success) {
+        setImprovements((prev) => prev.filter((p) => p.id !== pid))
+      } else {
+        showToast('error', data.error || 'Dismiss failed.')
+      }
+    } catch (err) {
+      showToast('error', err.message || 'Dismiss failed.')
+    } finally {
+      setImprovBusy(null)
+    }
+  }
+
+  const generateImprovements = async () => {
+    setImprovBusy('gen')
+    try {
+      const data = await proposalsApi.generateImprovements(id)
+      if (data.success) {
+        setImprovements(data.proposals || [])
+        showToast('success', `${data.proposals_created} improvement proposal(s) generated.`)
+      } else {
+        showToast('error', data.error || 'Generate failed.')
+      }
+    } catch (err) {
+      showToast('error', err.message || 'Generate failed.')
+    } finally {
+      setImprovBusy(null)
+    }
   }
 
   if (loading || !bundle || !draft) {
@@ -414,6 +474,115 @@ const ArticleReview = () => {
                     Local has unpushed changes. Pull from Ghost to discard, or
                     push to overwrite Ghost.
                   </span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Improvement Proposals panel (PR #7) */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Lightbulb className="h-4 w-4 text-yellow-500" />
+                  Improvement Proposals
+                  {improvements.length > 0 && (
+                    <Badge variant="secondary">{improvements.length}</Badge>
+                  )}
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={generateImprovements}
+                  disabled={improvBusy === 'gen'}
+                  title="Re-scan this article against the active Blueprint"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${improvBusy === 'gen' ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+              <CardDescription className="text-xs">
+                Blueprint conformance gaps. Apply to update locally, then push to Ghost.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {improvements.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No open proposals.{' '}
+                  <button
+                    onClick={generateImprovements}
+                    className="text-blue-600 hover:underline"
+                    disabled={improvBusy === 'gen'}
+                  >
+                    Scan now
+                  </button>
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {improvements.map((p) => (
+                    <div key={p.id} className="border rounded p-2.5 text-xs space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium capitalize">
+                          {p.blueprint_field.replace(/_/g, ' ')}
+                        </span>
+                        <Badge
+                          variant={p.status === 'applied' ? 'default' : 'secondary'}
+                          className="text-xs"
+                        >
+                          {p.evidence?.confidence_tier || 'medium'} confidence
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1">
+                        <div className="bg-gray-50 rounded p-1">
+                          <p className="text-gray-400 text-xs">Current</p>
+                          <p className="font-mono truncate">
+                            {Array.isArray(p.current_value)
+                              ? p.current_value.join('–')
+                              : String(p.current_value ?? '—')}
+                          </p>
+                        </div>
+                        <div className="bg-green-50 rounded p-1">
+                          <p className="text-gray-400 text-xs">Target</p>
+                          <p className="font-mono truncate">
+                            {Array.isArray(p.recommended_value)
+                              ? p.recommended_value.join('–')
+                              : String(p.recommended_value ?? '—')}
+                          </p>
+                        </div>
+                      </div>
+                      {p.rationale && (
+                        <p className="text-gray-500 leading-snug">{p.rationale}</p>
+                      )}
+                      {p.status === 'pending' && (
+                        <div className="flex gap-1.5 pt-0.5">
+                          <Button
+                            size="sm"
+                            className="h-6 text-xs px-2 bg-green-600 hover:bg-green-700 text-white"
+                            disabled={improvBusy === p.id}
+                            onClick={() => applyImprovement(p.id)}
+                          >
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Apply
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 text-xs px-2"
+                            disabled={improvBusy === p.id}
+                            onClick={() => dismissImprovement(p.id)}
+                          >
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Dismiss
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {/* Push CTA when any proposal has been applied */}
+                  {improvements.some((p) => p.status === 'applied') && isPublished && (
+                    <div className="bg-blue-50 border border-blue-200 rounded p-2 text-xs text-blue-800">
+                      <strong>Improvements applied.</strong> Save and Push to Ghost to make them live.
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
