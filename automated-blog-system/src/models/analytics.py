@@ -278,6 +278,9 @@ class ArticleImprovementProposal(db.Model):
     proposal is marked complete and Ghost-backed articles are flagged with
     ``has_unpushed_changes`` so an editor can make the recommended content
     change manually. On **Dismiss**, the row is closed with an optional reason.
+    A database uniqueness constraint on ``(article_id, blueprint_field, status)``
+    prevents duplicate pending proposals for the same field while still
+    preserving applied/dismissed history.
     """
 
     __tablename__ = "article_improvement_proposals"
