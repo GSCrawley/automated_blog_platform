@@ -119,8 +119,12 @@ def accept_proposal(proposal_id: int):
         # Build an updated Blueprint from the parent, applying the proposed value.
         blueprint = parent_row.to_blueprint()
         proposed = proposal.proposed_value()
+        if proposed is None or proposed == proposal.current_value():
+            return _err(
+                "Proposal has no actionable proposed value; edit it or regenerate before accepting.",
+                400,
+            )
         _apply_proposal_to_blueprint(blueprint, proposal.blueprint_field, proposed)
-
         # Assign a new unique ID consistent with _suggest_blueprint_id's format.
         stamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
         blueprint.id = f"bp_niche{proposal.niche_id}_{stamp}_{uuid.uuid4().hex[:4]}"
