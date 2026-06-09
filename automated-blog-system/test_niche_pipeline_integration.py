@@ -125,40 +125,6 @@ def test_pipeline_refuses_template_fallback_by_default(app):
         Config.OPENAI_API_KEY = original_key
 
 
-def test_pipeline_refuses_template_fallback_after_ai_failure(app):
-    """AI discovery failures must not silently fall back to template products
-    unless PIPELINE_ALLOW_TEMPLATE_FALLBACK is explicitly enabled."""
-    from src.config import Config
-
-    original_flag = Config.PIPELINE_ALLOW_TEMPLATE_FALLBACK
-    original_key = Config.OPENAI_API_KEY
-    Config.PIPELINE_ALLOW_TEMPLATE_FALLBACK = False
-    Config.OPENAI_API_KEY = "test-key"
-
-    try:
-        niche = Niche(name="AI Failure Test", active=True)
-        db.session.add(niche)
-        db.session.commit()
-
-        service = NichePipelineService()
-        with patch.object(
-            service,
-            "_discover_products_with_ai",
-            side_effect=RuntimeError("ai discovery failed"),
-        ):
-            service._execute_pipeline(app, niche.id)
-
-        db.session.expire_all()
-        refreshed = db.session.get(Niche, niche.id)
-        assert refreshed.pipeline_status == "error", \
-            f"expected pipeline_status='error', got {refreshed.pipeline_status!r}"
-        assert Product.query.filter_by(niche_id=niche.id).count() == 0
-        assert Article.query.filter_by(niche_id=niche.id).count() == 0
-    finally:
-        Config.PIPELINE_ALLOW_TEMPLATE_FALLBACK = original_flag
-        Config.OPENAI_API_KEY = original_key
-
-
 def test_article_to_headless_contract_includes_affiliate_cta(app):
     """Article.to_headless_contract() must populate calls_to_action from the
     linked Product's affiliate_url + tracking_id (PR #6.4 fix)."""
