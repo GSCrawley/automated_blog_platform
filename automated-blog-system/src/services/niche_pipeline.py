@@ -168,12 +168,18 @@ class NichePipelineService:
         from urllib.parse import quote_plus
         from src.config import Config
 
-        domain = Config.AMAZON_MARKETPLACE_DOMAIN
+        from urllib.parse import quote_plus, urlparse
+        from src.config import Config
+
+        domain = (Config.AMAZON_MARKETPLACE_DOMAIN or "www.amazon.com").lower()
+        base_domain = domain[4:] if domain.startswith("www.") else domain
+        allowed = {domain, base_domain}
+
         for key in ("affiliate_url", "source_url"):
             url = (pd.get(key) or "").strip()
-            if "amazon." in url:
+            host = (urlparse(url).hostname or "").lower()
+            if host in allowed or any(host.endswith(f".{d}") for d in allowed):
                 return url
-        name = (pd.get("name") or "").strip()
         if name:
             return f"https://{domain}/s?k={quote_plus(name)}"
         return f"https://{domain}"
