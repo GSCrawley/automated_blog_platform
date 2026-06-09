@@ -33,4 +33,9 @@ jobs:
         run: python -m pip install -r "${BACKEND_REQUIREMENTS_FILE}"
 
       - name: Install ripgrep
-        run: sudo apt-get install -y ripgrep || (sudo apt-get update && sudo apt-get install -y ripgrep)
+        run: |
+          if ! sudo apt-get install -y ripgrep; then
+            echo "Initial ripgrep install failed; refreshing apt index and retrying."
+            sudo apt-get update
+            sudo apt-get install -y ripgrep
+          fi
