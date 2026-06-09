@@ -11,9 +11,8 @@
 # =============================================================================
 set -euo pipefail
 
-GCLOUD="/opt/homebrew/Caskroom/gcloud-cli/571.0.0/google-cloud-sdk/bin/gcloud"
-GSUTIL="/opt/homebrew/Caskroom/gcloud-cli/571.0.0/google-cloud-sdk/bin/gsutil"
-
+GCLOUD="${GCLOUD:-gcloud}"
+GSUTIL="${GSUTIL:-gsutil}"
 # ── Configurable ─────────────────────────────────────────────────────────────
 # Replace with your actual GCP project ID (find it in Cloud Console → home)
 PROJECT_ID="${GCP_PROJECT_ID:-auto-blog-platform}"
