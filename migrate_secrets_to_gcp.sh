@@ -21,21 +21,22 @@ info() { printf '  \033[34mℹ\033[0m  %s\n' "$*"; }
 PROJECT_ID="$("$GCLOUD" config get-value project 2>/dev/null)"
 [[ -n "$PROJECT_ID" ]] || { echo "Run setup_gcp.sh first to set the active project."; exit 1; }
 
-# Secrets to migrate: <ENV_VAR>=<secret-manager-name>
-declare -A SECRETS=(
-  [OPENAI_API_KEY]="openai-api-key"
-  [TAVILY_API_KEY]="tavily-api-key"
-  [SERPER_API_KEY]="serper-api-key"
-  [GHOST_ADMIN_KEY]="ghost-admin-key"
-  [GHOST_CONTENT_API_KEY]="ghost-content-api-key"
+# Secrets to migrate. Secret Manager names match config.py's default mapping:
+#   OPENAI_API_KEY -> openai-api-key
+SECRETS=(
+  OPENAI_API_KEY
+  TAVILY_API_KEY
+  SERPER_API_KEY
+  GHOST_ADMIN_KEY
+  GHOST_CONTENT_API_KEY
 )
 
 echo ""
 echo "Migrating secrets to Secret Manager (project: $PROJECT_ID)"
 echo ""
 
-for env_var in "${!SECRETS[@]}"; do
-  secret_name="${SECRETS[$env_var]}"
+for env_var in "${SECRETS[@]}"; do
+  secret_name="$(echo "$env_var" | tr '[:upper:]_' '[:lower:]-')"
   value="$(grep "^${env_var}=" "$ENV_FILE" 2>/dev/null | cut -d= -f2- || true)"
 
   if [[ -z "$value" ]]; then
