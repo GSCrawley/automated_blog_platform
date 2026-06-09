@@ -93,6 +93,16 @@ class BlueprintRow(db.Model):
         except (TypeError, ValueError):
             return default
 
+    def profile_aggregate_has(self, key: str) -> bool:
+        """Return the modal bool for a structural field from ``profile_aggregate``."""
+        agg = self._load(self.profile_aggregate, {}) or {}
+        val = agg.get(key)
+        if val is None:
+            return False
+        if isinstance(val, dict):
+            return bool(val.get("modal") or val.get("value") or val.get("mean", 0) >= 0.5)
+        return bool(val)
+
     def to_blueprint(self) -> Blueprint:
         """Project this row to the in-memory Blueprint contract.
 

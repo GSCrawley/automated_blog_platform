@@ -548,4 +548,159 @@ def push_to_ghost(article_id: int):
         return jsonify(body)
 
 
+
+# ---------------------------------------------------------------------------
+# Improvement proposal sub-routes  (PR #7 retroactive editing)
+# ---------------------------------------------------------------------------
+
+
+@review_bp.route("/<int:article_id>/improvements", methods=["GET"])
+def get_improvements(article_id: int):
+    """Return pending improvement proposals for an article, sorted by
+    evidence strength (effect_size desc, then id asc as tiebreaker)."""
+    from src.models.analytics import ArticleImprovementProposal
+    article = Article.query.get(article_id)
+    if article is None:
+        return _err(f"Article {article_id} not found.", 404)
+
+    status_filter = request.args.get("status", "pending")
+    q = ArticleImprovementProposal.query.filter_by(article_id=article_id)
+    if status_filter != "all":
+        q = q.filter(ArticleImprovementProposal.status == status_filter)
+
+    proposals = q.order_by(ArticleImprovementProposal.generated_at.desc()).all()
+
+    # Sort by effect_size desc (best evidence first).
+    def _effect(p):
+        ev = p.evidence()
+        return float(ev.get("effect_size", 0) or 0)
+
+    proposals.sort(key=lambda p: (-_effect(p), p.id))
+
+    return jsonify(
+        {
+            "success": True,
+            "article_id": article_id,
+            "proposals": [p.to_dict() for p in proposals],
+        }
+    )
+
+
+@review_bp.route("/<int:article_id>/improvements/generate", methods=["POST"])
+def generate_improvements(article_id: int):
+    """On-demand: generate conformance-gap improvement proposals for one article."""
+    from src.services.feedback_engine import generate_improvement_proposals
+
+    article = Article.query.get(article_id)
+    if article is None:
+        return _err(f"Article {article_id} not found.", 404)
+
+    try:
+        proposals = generate_improvement_proposals(article_id)
+        return jsonify(
+            {
+                "success": True,
+                "article_id": article_id,
+                "proposals_created": len(proposals),
+                "proposals": [p.to_dict() for p in proposals],
+            }
+        )
+    except Exception:
+        logger.exception("generate_improvements failed for article %d", article_id)
+        return _err("Failed to generate improvement proposals.", 500)
+
+
+@review_bp.route(
+    "/<int:article_id>/improvements/<int:proposal_id>/apply", methods=["POST"]
+)
+def apply_improvement(article_id: int, proposal_id: int):
+    """Mark an improvement proposal applied for manual follow-up.
+
+    Applies any generated patch, sets ``has_unpushed_changes=True`` for
+    Ghost-backed articles, and marks the proposal ``status='applied'``.
+    """
+    from src.models.analytics import ArticleImprovementProposal
+
+    article = Article.query.get(article_id)
+    if article is None:
+        return _err(f"Article {article_id} not found.", 404)
+
+    proposal = ArticleImprovementProposal.query.get(proposal_id)
+    if proposal is None or proposal.article_id != article_id:
+        return _err(f"Proposal {proposal_id} not found for article {article_id}.", 404)
+    if proposal.status != "pending":
+        return _err(
+            f"Proposal is already '{proposal.status}'; only pending proposals can be applied.",
+            409,
+        )
+
+    with _article_lock(article_id):
+        patch = _build_patch_from_proposal(proposal, article)
+        if patch:
+            err = _validate_patch(patch)
+            if err is not None:
+                return err
+            _apply_patch(article, patch)
+
+        # PR #7 reminder-system behavior: mark local row as needing a push even
+        # when no auto-patch is performed.
+        if article.ghost_post_id:
+            article.has_unpushed_changes = True
+            article.updated_at = datetime.utcnow()
+
+        proposal.status = "applied"
+        proposal.reviewed_at = datetime.utcnow()
+        db.session.commit()
+
+    return get_article(article_id)
+
+
+@review_bp.route(
+    "/<int:article_id>/improvements/<int:proposal_id>/dismiss", methods=["POST"]
+)
+def dismiss_improvement(article_id: int, proposal_id: int):
+    """Dismiss a proposal with an optional reason."""
+    from src.models.analytics import ArticleImprovementProposal
+
+    article = Article.query.get(article_id)
+    if article is None:
+        return _err(f"Article {article_id} not found.", 404)
+
+    proposal = ArticleImprovementProposal.query.get(proposal_id)
+    if proposal is None or proposal.article_id != article_id:
+        return _err(f"Proposal {proposal_id} not found for article {article_id}.", 404)
+    if proposal.status != "pending":
+        return _err(
+            f"Proposal is already '{proposal.status}'; only pending proposals can be dismissed.",
+            409,
+        )
+
+    body = request.get_json() or {}
+    proposal.status = "dismissed"
+    proposal.dismissed_reason = str(body.get("reason", ""))
+    proposal.reviewed_at = datetime.utcnow()
+    db.session.commit()
+
+    return jsonify(
+        {"success": True, "proposal_id": proposal_id, "status": "dismissed"}
+    )
+
+
+def _build_patch_from_proposal(proposal, article: Article) -> dict:
+    """Translate a proposal's recommended_value into a PATCH body.
+
+    All Blueprint fields that improvement proposals operate on require
+    substantive content rewrites that cannot be auto-applied (word count,
+    H2 structure, FAQ insertion, comparison table, image assets, schema
+    markup). This function intentionally returns an empty dict for every
+    field: the ``apply`` route marks the proposal applied and sets
+    ``has_unpushed_changes = True`` to signal the human editor that
+    attention is needed, but the actual edit remains the human's
+    responsibility. The proposal card in ArticleReview.jsx shows the
+    current vs recommended value so the editor knows exactly what to change.
+    """
+    # All current Blueprint fields require human content edits — see docstring.
+    return {}  # noqa: RET504
+
+
 __all__ = ["review_bp", "publish_article_now"]

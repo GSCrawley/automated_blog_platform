@@ -108,3 +108,15 @@ class Config:
             print(f"Ghost configured for: {cls.GHOST_API_URL}")
         else:
             print("⚠️  Ghost env vars missing — publisher will not work.")
+
+
+# Hook point for all test-only overrides: mock Ghost, mock OpenAI, etc.
+# Add future test-only settings here rather than scattering them across
+# individual test fixtures.
+class TestConfig(Config):
+    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    TESTING = True
+    OPENAI_API_KEY = None
+    # Allow the template fallback path by default so pipeline tests run without
+    # a real API key; individual tests can flip this on the live Config if needed.
+    PIPELINE_ALLOW_TEMPLATE_FALLBACK = True

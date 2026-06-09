@@ -11,17 +11,26 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), '..'
 from flask import Flask, send_from_directory, request, jsonify
 from flask_cors import CORS
 from flask_migrate import Migrate
-from src.config import Config
+from src.config import Config, TestConfig
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def create_app():
+def create_app(testing: bool = False):
     # Set static_folder to the built React app directory
     app = Flask(__name__, static_folder='../static', static_url_path='/')
-    app.config.from_object(Config)
-    Config.init_app(app)
+    cfg = TestConfig if testing else Config
+    app.config.from_object(cfg)
+    if testing:
+        # Mirror TestConfig overrides onto the Config class so that services
+        # which read Config.* directly (not current_app.config) also see the
+        # test values and don't accidentally call real OpenAI / enable the
+        # template fallback path.
+        Config.OPENAI_API_KEY = TestConfig.OPENAI_API_KEY
+        Config.PIPELINE_ALLOW_TEMPLATE_FALLBACK = TestConfig.PIPELINE_ALLOW_TEMPLATE_FALLBACK
+    else:
+        Config.init_app(app)
 
     # Initialize database
     from src.models.user import db
@@ -35,6 +44,13 @@ def create_app():
     from src.models.niche import Niche
     from src.models.agent_models import AgentState, BlogInstance, AgentTask, AgentDecision
     from src.models.observability import CostEvent, Budget, EditorialReport  # PR #3
+    from src.models.analytics import (  # PR #7
+        ArticleAnalyticsDaily,
+        ArticlePerformance,
+        ArticleBlueprintSnapshot,
+        BlueprintProposal,
+        ArticleImprovementProposal,
+    )
 
     # Initialize Flask-Migrate (PR #3). The migrations/ directory lives at
     # automated-blog-system/migrations/ — relative to the working dir set by
@@ -45,33 +61,38 @@ def create_app():
     )
     Migrate(app, db, directory=migrations_dir)
 
-    # Initialize Agent Manager (attached to app for route access)
-    try:
-        # Import from core directory (relative to project root)
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        core_agents_path = os.path.join(project_root, 'core')
-        if core_agents_path not in sys.path:
-            sys.path.insert(0, core_agents_path)
+    # Initialize Agent Manager (attached to app for route access).
+    # Skipped in testing mode — Redis I/O and background threads are
+    # non-deterministic side effects that have no place in unit/integration tests.
+    if not testing:
+        try:
+            # Import from core directory (relative to project root)
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            core_agents_path = os.path.join(project_root, 'core')
+            if core_agents_path not in sys.path:
+                sys.path.insert(0, core_agents_path)
 
-        from agents.agent_manager import AgentManager
-        app.agent_manager = AgentManager(
-            redis_host=app.config.get('REDIS_HOST', 'localhost'),
-            redis_port=app.config.get('REDIS_PORT', 6379)
-        )
-        print("✅ Agent Manager initialized successfully")
+            from agents.agent_manager import AgentManager
+            app.agent_manager = AgentManager(
+                redis_host=app.config.get('REDIS_HOST', 'localhost'),
+                redis_port=app.config.get('REDIS_PORT', 6379)
+            )
+            print("✅ Agent Manager initialized successfully")
 
-        # Start agents in a background thread so they run alongside Flask
-        import threading
-        agent_thread = threading.Thread(
-            target=app.agent_manager.start_monitoring_loop,
-            name="AgentManagerMonitor",
-            daemon=True
-        )
-        agent_thread.start()
-        print("✅ Agent system started in background")
-    except Exception as e:
-        print(f"⚠️ Agent Manager initialization failed: {e}")
-        print("   Agent routes will use mock data fallback")
+            # Start agents in a background thread so they run alongside Flask
+            import threading
+            agent_thread = threading.Thread(
+                target=app.agent_manager.start_monitoring_loop,
+                name="AgentManagerMonitor",
+                daemon=True
+            )
+            agent_thread.start()
+            print("✅ Agent system started in background")
+        except Exception as e:
+            print(f"⚠️ Agent Manager initialization failed: {e}")
+            print("   Agent routes will use mock data fallback")
+            app.agent_manager = None
+    else:
         app.agent_manager = None
 
     # Register blueprints with debug prints
@@ -123,6 +144,44 @@ def create_app():
         print("✅ Review blueprint registered successfully")
     except Exception as e:
         print(f"❌ Error registering review blueprint: {e}")
+
+    try:
+        from src.routes.proposals import proposals_bp
+        app.register_blueprint(proposals_bp, url_prefix='/api/proposals')
+        print("✅ Proposals blueprint registered successfully")
+    except Exception as e:
+        print(f"❌ Error registering proposals blueprint: {e}")
+
+    # PR #7 — daily analytics ingest job (APScheduler, fires at 06:00 local).
+    # Only started in production mode; tests inject providers directly.
+    if not testing:
+        try:
+            from apscheduler.schedulers.background import BackgroundScheduler
+
+            scheduler = BackgroundScheduler()
+
+            def _daily_ingest_job():
+                with app.app_context():
+                    from src.services.analytics.ingest import run_daily_ingest
+                    run_daily_ingest()
+
+            scheduler.add_job(
+                _daily_ingest_job,
+                trigger="cron",
+                hour=6,
+                minute=0,
+                id="daily_analytics_ingest",
+                replace_existing=True,
+            )
+            scheduler.start()
+            app.analytics_scheduler = scheduler
+            print("✅ Analytics ingest scheduler started (daily at 06:00)")
+        except ImportError:
+            print("⚠️  APScheduler not installed — analytics ingest scheduler not started")
+            app.analytics_scheduler = None
+        except Exception as e:
+            print(f"⚠️  Analytics scheduler failed to start: {e}")
+            app.analytics_scheduler = None
 
 
     # Serve React Frontend
