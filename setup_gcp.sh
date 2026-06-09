@@ -117,8 +117,12 @@ if "$GSUTIL" ls -b "gs://${BUCKET_NAME}" &>/dev/null; then
   warn "Bucket gs://$BUCKET_NAME already exists — skipping"
 else
   "$GSUTIL" mb -p "$PROJECT_ID" -l "$REGION" "gs://${BUCKET_NAME}"
-  # Allow public reads so uploaded media is accessible via public URL
-  "$GSUTIL" iam ch allUsers:objectViewer "gs://${BUCKET_NAME}"
+
+  if [[ "${GCS_PUBLIC_READ:-false}" == "true" ]]; then
+    # Allow public reads so uploaded media is accessible via public URL
+    "$GSUTIL" iam ch allUsers:objectViewer "gs://${BUCKET_NAME}"
+  fi
+
   ok "Bucket created: gs://$BUCKET_NAME"
 fi
 
