@@ -242,12 +242,14 @@ class NichePipelineService:
             try:
                 return self._discover_products_with_ai(niche)
             except Exception as exc:
-                logger.warning(
-                    "AI product discovery failed (%s). Falling back to "
-                    "template-based discovery so the pipeline can continue.",
-                    exc,
-                )
-                return self._discover_products_from_templates(niche)
+                if Config.PIPELINE_ALLOW_TEMPLATE_FALLBACK:
+                    logger.warning(
+                        "AI product discovery failed (%s). Falling back to "
+                        "template-based discovery so the pipeline can continue.",
+                        exc,
+                    )
+                    return self._discover_products_from_templates(niche)
+                raise
 
         # No OPENAI_API_KEY.
         if Config.PIPELINE_ALLOW_TEMPLATE_FALLBACK:
