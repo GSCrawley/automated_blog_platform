@@ -1,13 +1,12 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BACKEND_DIR="$SCRIPT_DIR/automated-blog-system"
-
-cd "$BACKEND_DIR"
+# Activate the virtual environment
 source venv/bin/activate
 
-# Keep default aligned with frontend API fallback.
-PORT="${PORT:-5000}"
-python src/main.py --port "$PORT"
+# Change to the automated-blog-system directory
+cd automated-blog-system
+
+# Start the backend server
+python src/main.py --port 5001
+
+# Note: Press Ctrl+C to stop the server

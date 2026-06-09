@@ -42,12 +42,3 @@ build/
 *.egg-info/
 
 repomix-output.md
-repomix-output.xml
-
-# Kilo IDE
-.kilo/
-
-# Google Cloud credentials (NEVER commit service account keys)
-credentials/*.json
-credentials/
-!credentials/.gitkeep
