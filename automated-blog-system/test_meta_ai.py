@@ -80,6 +80,11 @@ def test_chat_metered(app, meta_env):
 def test_contributor_tier_requires_opt_in(app, meta_env, monkeypatch):
     with pytest.raises(MetaModelError):
         MetaModelClient(text_model="muse-spark-1.3-contributor")
+    with pytest.raises(MetaModelError):
+        MetaModelClient().chat(
+            [{"role": "user", "content": "private prompt"}],
+            model="muse-spark-1.3-contributor",
+        )
     monkeypatch.setenv("META_ALLOW_CONTRIBUTOR_TIER", "true")
     assert MetaModelClient(text_model="muse-spark-1.3-contributor").text_model.endswith("contributor")
 
@@ -114,13 +119,25 @@ def test_code_cannot_activate(app, meta_env):
 def test_conversion_event(app, meta_env):
     resp_lib.add(resp_lib.POST, "https://graph.facebook.com/v26.0/999/events", json={"events_received": 1})
     MetaMarketingClient().send_conversion_event(
-        "Lead", event_source_url="https://deskcred.blog/newsletter", email=" Reader@Example.com ", event_id="lead-1"
+        "Lead",
+        event_source_url="https://deskcred.blog/newsletter",
+        email=" Reader@Example.com ",
+        user_agent="Mozilla/5.0",
+        event_id="lead-1",
     )
     ev = json.loads(_form(resp_lib.calls[0])["data"])[0]
     assert ev["event_name"] == "Lead" and ev["action_source"] == "website" and ev["event_id"] == "lead-1"
     import hashlib
 
     assert ev["user_data"]["em"] == [hashlib.sha256(b"reader@example.com").hexdigest()]
+    assert ev["user_data"]["client_user_agent"] == "Mozilla/5.0"
+
+
+def test_conversion_event_requires_nonempty_user_agent(app, meta_env):
+    with pytest.raises(MetaGraphError, match="client_user_agent is required"):
+        MetaMarketingClient().send_conversion_event(
+            "Lead", event_source_url="https://deskcred.blog/newsletter"
+        )
 
 
 def test_campaign_handler_refuses_amazon(app, meta_env):

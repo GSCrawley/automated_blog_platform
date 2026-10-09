@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import os
 import re
+from html.parser import HTMLParser
 from typing import List
 from urllib.parse import urlparse
 
@@ -28,6 +29,7 @@ from src.overseers.base import ActionSpec, BaseOverseer, Finding
 AMAZON_DISCLOSURE = re.compile(r"as an amazon associate,? i earn from qualifying purchases", re.I)
 LINK_DISCLOSURE = re.compile(r"(affiliate|commission|paid link|#ad\b|#commissionsearned)", re.I)
 AMAZON_SHORT_HOSTS = {"amzn.to", "amzn.com", "amzn.eu", "a.co"}
+BLOCK_TAGS = {"article", "blockquote", "div", "figcaption", "footer", "li", "p", "section", "td", "th"}
 
 
 def is_amazon_url(url: str) -> bool:
@@ -39,6 +41,47 @@ def is_amazon_url(url: str) -> bool:
         return True
     labels = host.split(".")
     return "amazon" in labels[:-1]
+
+
+class _AmazonLinkDisclosureParser(HTMLParser):
+    def __init__(self, html: str):
+        super().__init__()
+        self.blocks = {}
+        self.stack = []
+        self.amazon_link_blocks = []
+        self._next_block_id = 0
+        self.feed(html)
+
+    def handle_starttag(self, tag, attrs):
+        if tag in BLOCK_TAGS:
+            self._next_block_id += 1
+            self.blocks[self._next_block_id] = []
+            self.stack.append((tag, self._next_block_id))
+        if tag == "a":
+            href = dict(attrs).get("href", "")
+            if is_amazon_url(href):
+                self.amazon_link_blocks.append(self.stack[-1][1] if self.stack else None)
+
+    def handle_startendtag(self, tag, attrs):
+        self.handle_starttag(tag, attrs)
+        self.handle_endtag(tag)
+
+    def handle_endtag(self, tag):
+        for index in range(len(self.stack) - 1, -1, -1):
+            if self.stack[index][0] == tag:
+                del self.stack[index:]
+                return
+
+    def handle_data(self, data):
+        if self.stack:
+            self.blocks[self.stack[-1][1]].append(data)
+
+    def missing_disclosure(self) -> bool:
+        return any(
+            block_id is None
+            or not LINK_DISCLOSURE.search(" ".join(self.blocks[block_id]))
+            for block_id in self.amazon_link_blocks
+        )
 
 
 class ComplianceOverseer(BaseOverseer):
@@ -64,7 +107,8 @@ class ComplianceOverseer(BaseOverseer):
                     )
                 )
             html = a.content or ""
-            amazon_linked = "amazon." in html.lower() or "amzn.to" in html.lower() or (
+            links = _AmazonLinkDisclosureParser(html)
+            amazon_linked = bool(links.amazon_link_blocks) or "amazon." in html.lower() or "amzn.to" in html.lower() or (
                 a.product is not None and is_amazon_url(a.product.affiliate_url or "")
             )
             if amazon_linked and not (AMAZON_DISCLOSURE.search(html) or site_disclosure):
@@ -84,7 +128,7 @@ class ComplianceOverseer(BaseOverseer):
                         actions=[ActionSpec("notify_human", {"article_id": a.id}, risk="auto")],
                     )
                 )
-            if amazon_linked and not LINK_DISCLOSURE.search(html):
+            if links.amazon_link_blocks and links.missing_disclosure():
                 out.append(
                     Finding(
                         code="missing_link_disclosure",

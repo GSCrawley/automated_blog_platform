@@ -22,6 +22,7 @@ from src.overseers.base import ActionSpec, BaseOverseer, Finding
 TERMINAL_STAGES = {"awaiting_human_review", "published", "archived"}
 STUCK_AFTER_HOURS = 6
 RETRY_BUDGET = 2  # GOALS.md: per-article retry budget is 2 cycles
+CREWAI_GENERATION_STAGE = "crewai_generation"
 
 # Repo-root paths that are superseded by later PRs. Detected, never deleted
 # by the app — deletion goes through an approved engineering ticket / PR.
@@ -187,6 +188,7 @@ class SystemsOverseer(BaseOverseer):
             r[0]
             for r in db.session.query(CostEvent.article_id)
             .filter(CostEvent.article_id.in_(ids))
+            .filter(CostEvent.stage == CREWAI_GENERATION_STAGE)
             .distinct()
             .all()
         }
@@ -200,9 +202,10 @@ class SystemsOverseer(BaseOverseer):
                 severity="high",
                 category="engineering",
                 detail=(
-                    "CrewAI LLM calls are not wired into CostMeter.record, so the "
-                    "monthly budget circuit breaker is blind to real spend. Wire a "
-                    "CrewAI/LiteLLM success callback that calls CostMeter.record."
+                    "CrewAI LLM calls are not wired into CostMeter.record with "
+                    f"stage={CREWAI_GENERATION_STAGE!r}, so the monthly budget "
+                    "circuit breaker is blind to real spend. Wire a CrewAI/LiteLLM "
+                    "success callback that records this stage."
                 ),
                 evidence={"article_ids": unmetered[:50]},
                 subject_type="system",

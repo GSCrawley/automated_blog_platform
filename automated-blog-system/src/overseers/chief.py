@@ -23,9 +23,11 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Dict, Iterable, List, Optional
 
+from sqlalchemy.exc import IntegrityError
+
 from src.models.overseer import OverseerAction, OverseerFinding, OverseerRun
 from src.models.user import db
-from src.overseers.actions import apply_action, effective_risk
+from src.overseers.actions import apply_action, dispatch_pending_retries, effective_risk
 from src.overseers.audience import AudienceOverseer
 from src.overseers.base import SEVERITY_ORDER, ActionSpec, BaseOverseer, Finding
 from src.overseers.compliance import ComplianceOverseer
@@ -92,6 +94,19 @@ def _auto_apply_enabled(explicit: Optional[bool]) -> bool:
     return os.getenv("OVERSEER_AUTO_APPLY", "true").lower() == "true"
 
 
+def _record_occurrence(row: OverseerFinding, finding: Finding, now: datetime) -> None:
+    values = {
+        "last_seen_at": now,
+        "occurrences": OverseerFinding.occurrences + 1,
+        "title": finding.title[:300],
+    }
+    if finding.evidence:
+        values["evidence_json"] = json.dumps(finding.evidence, default=str)
+    db.session.query(OverseerFinding).filter_by(id=row.id, status="open").update(
+        values, synchronize_session=False
+    )
+
+
 def run_cycle(
     *,
     trigger: str = "manual",
@@ -101,6 +116,11 @@ def run_cycle(
 ) -> Dict:
     now = now or datetime.utcnow()
     roster = list(overseers) if overseers is not None else default_roster(now)
+    try:
+        dispatch_pending_retries()
+    except Exception:
+        db.session.rollback()
+        log.exception("Could not dispatch pending overseer retries")
     run = OverseerRun(trigger=trigger, started_at=now)
     db.session.add(run)
     db.session.flush()
@@ -112,10 +132,10 @@ def run_cycle(
 
     for ov in roster:
         try:
-            findings = ov.sense()
+            with db.session.begin_nested():
+                findings = ov.sense()
             healthy.add(ov.name)
         except Exception as e:  # an overseer bug must not stop the others
-            db.session.rollback()
             log.exception("Overseer %s crashed", ov.name)
             findings = [
                 Finding(
@@ -141,39 +161,43 @@ def run_cycle(
             seen.add(fp)
             existing = OverseerFinding.query.filter_by(fingerprint=fp, status="open").first()
             if existing:
-                existing.last_seen_at = now
-                existing.occurrences += 1
-                existing.title = f.title
-                existing.evidence_json = json.dumps(f.evidence, default=str) if f.evidence else existing.evidence_json
+                _record_occurrence(existing, f, now)
                 continue
-            row = OverseerFinding(
-                fingerprint=fp,
-                overseer=ov_name,
-                code=f.code,
-                severity=f.severity,
-                category=f.category,
-                title=f.title[:300],
-                detail=f.detail,
-                evidence_json=json.dumps(f.evidence, default=str) if f.evidence else None,
-                subject_type=f.subject_type,
-                subject_id=f.subject_id,
-                first_seen_at=now,
-                last_seen_at=now,
-                first_run_id=run.id,
-            )
-            db.session.add(row)
-            db.session.flush()
-            for spec in f.actions:
-                db.session.add(
-                    OverseerAction(
-                        finding_id=row.id,
-                        kind=spec.kind,
-                        risk=effective_risk(spec.kind, spec.risk),
-                        params_json=json.dumps(spec.params, default=str),
-                        created_at=now,
+            try:
+                with db.session.begin_nested():
+                    row = OverseerFinding(
+                        fingerprint=fp,
+                        overseer=ov_name,
+                        code=f.code,
+                        severity=f.severity,
+                        category=f.category,
+                        title=f.title[:300],
+                        detail=f.detail,
+                        evidence_json=json.dumps(f.evidence, default=str) if f.evidence else None,
+                        subject_type=f.subject_type,
+                        subject_id=f.subject_id,
+                        first_seen_at=now,
+                        last_seen_at=now,
+                        first_run_id=run.id,
                     )
-                )
-            opened += 1
+                    db.session.add(row)
+                    db.session.flush()
+                    for spec in f.actions:
+                        db.session.add(
+                            OverseerAction(
+                                finding_id=row.id,
+                                kind=spec.kind,
+                                risk=effective_risk(spec.kind, spec.risk),
+                                params_json=json.dumps(spec.params, default=str),
+                                created_at=now,
+                            )
+                        )
+                opened += 1
+            except IntegrityError:
+                existing = OverseerFinding.query.filter_by(fingerprint=fp, status="open").first()
+                if existing is None:
+                    raise
+                _record_occurrence(existing, f, now)
 
     # Verify: open findings from healthy overseers that did not fire this
     # cycle are resolved; their applied actions are marked verified.

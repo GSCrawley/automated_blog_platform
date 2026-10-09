@@ -109,13 +109,14 @@ class MetaMarketingClient:
     ) -> Dict[str, Any]:
         if not (self.pixel_id and self.token):
             raise MetaGraphError("META_PIXEL_ID / META_SYSTEM_USER_TOKEN not set")
+        if not user_agent or not user_agent.strip():
+            raise MetaGraphError("client_user_agent is required for website conversion events")
         user_data: Dict[str, Any] = {}
         if email:
             user_data["em"] = [_sha256(email)]
         if client_ip:
             user_data["client_ip_address"] = client_ip
-        if user_agent:
-            user_data["client_user_agent"] = user_agent
+        user_data["client_user_agent"] = user_agent
         event = {
             "event_name": event_name,
             "event_time": int(time.time()),

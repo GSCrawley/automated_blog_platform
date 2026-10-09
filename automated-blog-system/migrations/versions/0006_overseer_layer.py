@@ -53,7 +53,14 @@ def upgrade() -> None:
         sa.Column("occurrences", sa.Integer, nullable=False, server_default="1"),
         sa.Column("first_run_id", sa.Integer, sa.ForeignKey("overseer_runs.id"), nullable=True),
     )
-    op.create_index("ix_overseer_findings_fingerprint", "overseer_findings", ["fingerprint"])
+    op.create_index(
+        "uq_overseer_findings_open_fingerprint",
+        "overseer_findings",
+        ["fingerprint"],
+        unique=True,
+        sqlite_where=sa.text("status = 'open'"),
+        postgresql_where=sa.text("status = 'open'"),
+    )
     op.create_index("ix_overseer_findings_overseer", "overseer_findings", ["overseer"])
     op.create_index("ix_overseer_findings_code", "overseer_findings", ["code"])
     op.create_index("ix_overseer_findings_status", "overseer_findings", ["status"])
@@ -85,14 +92,30 @@ def upgrade() -> None:
         sa.Column("updated_by", sa.String(100), nullable=True),
     )
 
+    op.create_table(
+        "overseer_dispatches",
+        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("action_id", sa.Integer, sa.ForeignKey("overseer_actions.id"), nullable=False, unique=True),
+        sa.Column("article_id", sa.Integer, nullable=False),
+        sa.Column("status", sa.String(20), nullable=False, server_default="pending"),
+        sa.Column("attempts", sa.Integer, nullable=False, server_default="0"),
+        sa.Column("last_error", sa.Text, nullable=True),
+        sa.Column("created_at", sa.DateTime, nullable=False),
+        sa.Column("updated_at", sa.DateTime, nullable=False),
+    )
+    op.create_index("ix_overseer_dispatches_status", "overseer_dispatches", ["status"])
+
 
 def downgrade() -> None:
+    op.drop_index("ix_overseer_dispatches_status", table_name="overseer_dispatches")
+    op.drop_table("overseer_dispatches")
     op.drop_table("overseer_controls")
     op.drop_index("ix_overseer_actions_status", table_name="overseer_actions")
     op.drop_index("ix_overseer_actions_finding_id", table_name="overseer_actions")
     op.drop_table("overseer_actions")
-    for ix in ("status", "code", "overseer", "fingerprint"):
+    for ix in ("status", "code", "overseer"):
         op.drop_index(f"ix_overseer_findings_{ix}", table_name="overseer_findings")
+    op.drop_index("uq_overseer_findings_open_fingerprint", table_name="overseer_findings")
     op.drop_table("overseer_findings")
     op.drop_index("ix_overseer_runs_started_at", table_name="overseer_runs")
     op.drop_table("overseer_runs")

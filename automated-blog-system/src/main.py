@@ -24,6 +24,27 @@ def _record_blueprint_error(app, name, exc):
     app.extensions.setdefault("blueprint_errors", {})[name] = f"{type(exc).__name__}: {exc}"[:500]
 
 
+def _schedule_overseer_job(scheduler, job):
+    try:
+        overseer_minutes = int(os.getenv("OVERSEER_INTERVAL_MINUTES", "30"))
+    except (TypeError, ValueError):
+        logger.warning("Invalid OVERSEER_INTERVAL_MINUTES; overseer job disabled")
+        return
+    if overseer_minutes <= 0:
+        logger.warning("Non-positive OVERSEER_INTERVAL_MINUTES; overseer job disabled")
+        return
+    try:
+        scheduler.add_job(
+            job,
+            trigger="interval",
+            minutes=overseer_minutes,
+            id="overseer_cycle",
+            replace_existing=True,
+        )
+    except Exception:
+        logger.exception("Could not schedule overseer job; analytics ingest remains enabled")
+
+
 def create_app(testing: bool = False):
     # Set static_folder to the built React app directory
     app = Flask(__name__, static_folder='../static', static_url_path='/')
@@ -63,6 +84,7 @@ def create_app(testing: bool = False):
         OverseerFinding,
         OverseerAction,
         OverseerControl,
+        OverseerDispatch,
     )
 
     # Initialize Flask-Migrate (PR #3). The migrations/ directory lives at
@@ -194,20 +216,12 @@ def create_app(testing: bool = False):
                 replace_existing=True,
             )
             # PR #21 — overseer control loop.
-            overseer_minutes = int(os.getenv("OVERSEER_INTERVAL_MINUTES", "30"))
-            if overseer_minutes > 0:
-                def _overseer_job():
-                    with app.app_context():
-                        from src.overseers.chief import run_cycle
-                        run_cycle(trigger="schedule")
+            def _overseer_job():
+                with app.app_context():
+                    from src.overseers.chief import run_cycle
+                    run_cycle(trigger="schedule")
 
-                scheduler.add_job(
-                    _overseer_job,
-                    trigger="interval",
-                    minutes=overseer_minutes,
-                    id="overseer_cycle",
-                    replace_existing=True,
-                )
+            _schedule_overseer_job(scheduler, _overseer_job)
             scheduler.start()
             app.analytics_scheduler = scheduler
             print("✅ Analytics ingest scheduler started (daily at 06:00)")

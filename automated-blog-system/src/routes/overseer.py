@@ -14,9 +14,8 @@
     POST /controls/pipeline/resume       human-only resume after an overseer pause
     POST /revenue/associates-csv         body = Associates Central CSV; ?date=YYYY-MM-DD
 
-Mutating endpoints require ``X-Overseer-Token`` when ``OVERSEER_API_TOKEN``
-is set (recommended whenever the API is reachable beyond localhost, e.g.
-from a Grok Bot routine).
+Mutating endpoints require ``X-Overseer-Token``. The token must be configured
+outside tests; production requests fail closed when it is absent.
 """
 from __future__ import annotations
 
@@ -41,7 +40,13 @@ def _guarded(fn):
     @wraps(fn)
     def inner(*a, **kw):
         token = os.getenv("OVERSEER_API_TOKEN")
-        if token and request.headers.get("X-Overseer-Token") != token:
+        if not token:
+            from flask import current_app
+
+            if current_app.testing:
+                return fn(*a, **kw)
+            return _err("OVERSEER_API_TOKEN is not configured", 503)
+        if request.headers.get("X-Overseer-Token") != token:
             return _err("invalid or missing X-Overseer-Token", 401)
         return fn(*a, **kw)
 

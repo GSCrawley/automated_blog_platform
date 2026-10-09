@@ -27,6 +27,8 @@ import json
 from datetime import datetime
 from typing import Any, Dict, Optional
 
+from sqlalchemy import Index, text
+
 from src.models.user import db
 
 
@@ -60,7 +62,7 @@ class OverseerFinding(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     # Stable identity for dedupe: "<code>:<subject>", e.g. "stuck_article:42".
-    fingerprint = db.Column(db.String(200), nullable=False, index=True)
+    fingerprint = db.Column(db.String(200), nullable=False)
     overseer = db.Column(db.String(40), nullable=False, index=True)  # systems|content|market|revenue|audience|compliance|chief
     code = db.Column(db.String(80), nullable=False, index=True)
     severity = db.Column(db.String(10), nullable=False, default="medium")  # low|medium|high|critical
@@ -78,6 +80,16 @@ class OverseerFinding(db.Model):
     first_run_id = db.Column(db.Integer, db.ForeignKey("overseer_runs.id"), nullable=True)
 
     actions = db.relationship("OverseerAction", backref="finding", lazy=True)
+
+    __table_args__ = (
+        Index(
+            "uq_overseer_findings_open_fingerprint",
+            "fingerprint",
+            unique=True,
+            sqlite_where=text("status = 'open'"),
+            postgresql_where=text("status = 'open'"),
+        ),
+    )
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -177,4 +189,19 @@ class OverseerControl(db.Model):
             row.updated_at = datetime.utcnow()
 
 
-__all__ = ["OverseerRun", "OverseerFinding", "OverseerAction", "OverseerControl"]
+class OverseerDispatch(db.Model):
+    """Durable, retryable dispatches created alongside approved actions."""
+
+    __tablename__ = "overseer_dispatches"
+
+    id = db.Column(db.Integer, primary_key=True)
+    action_id = db.Column(db.Integer, db.ForeignKey("overseer_actions.id"), nullable=False, unique=True)
+    article_id = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="pending", index=True)
+    attempts = db.Column(db.Integer, nullable=False, default=0)
+    last_error = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+__all__ = ["OverseerRun", "OverseerFinding", "OverseerAction", "OverseerControl", "OverseerDispatch"]

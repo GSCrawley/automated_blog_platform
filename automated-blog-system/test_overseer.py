@@ -33,15 +33,17 @@ sys.path.insert(0, str(ROOT.parent))
 os.environ.setdefault("GHOST_API_URL", "https://ghost.test.local")
 os.environ.setdefault("GHOST_ADMIN_KEY", "0123456789abcdef01234567:" + "a" * 64)
 
-from src.main import create_app  # noqa: E402
+from src.main import _schedule_overseer_job, create_app  # noqa: E402
 from src.models.analytics import ArticleAnalyticsDaily  # noqa: E402
 from src.models.niche import Niche  # noqa: E402
 from src.models.observability import Budget  # noqa: E402
-from src.models.overseer import OverseerAction, OverseerControl, OverseerFinding  # noqa: E402
+from src.models.overseer import OverseerAction, OverseerControl, OverseerDispatch, OverseerFinding, OverseerRun  # noqa: E402
 from src.models.product import Article, Product  # noqa: E402
+from src.models.observability import CostEvent  # noqa: E402
 from src.models.user import db  # noqa: E402
 from src.overseers import actions as actions_mod  # noqa: E402
 from src.overseers.chief import ChiefOverseer, run_cycle  # noqa: E402
+from src.overseers.base import BaseOverseer, Finding  # noqa: E402
 from src.overseers.compliance import ComplianceOverseer  # noqa: E402
 from src.overseers.revenue import RevenueOverseer  # noqa: E402
 from src.overseers.systems import SystemsOverseer  # noqa: E402
@@ -176,12 +178,108 @@ def test_retry_requires_approval_and_respects_budget(app, client, niche, monkeyp
     assert calls == [a.id]
 
 
+def test_retry_dispatch_failure_is_queued_without_reusing_budget(app, niche, monkeypatch):
+    p = _product(niche)
+    a = _article(p, current_stage="stage_2_creation", stage_status="error", last_error="boom")
+    run_cycle(trigger="test")
+    retry = next(x for x in _open("article_failed")[0].actions if x.kind == "retry_article")
+    retry.status = "approved"
+    db.session.commit()
+
+    attempts = []
+
+    def flaky_runner(article_id):
+        attempts.append(article_id)
+        if len(attempts) == 1:
+            raise RuntimeError("thread startup failed")
+
+    monkeypatch.setattr(actions_mod, "FLOW_RUNNER", flaky_runner)
+    assert actions_mod.apply_action(retry).status == "applied"
+    dispatch = OverseerDispatch.query.one()
+    assert dispatch.status == "pending" and dispatch.attempts == 1
+    assert OverseerControl.get(f"retries:{a.id}") == 1
+
+    actions_mod.dispatch_pending_retries()
+    assert dispatch.status == "dispatched" and dispatch.attempts == 2
+    assert attempts == [a.id, a.id]
+    assert OverseerControl.get(f"retries:{a.id}") == 1
+
+
 # 5 -------------------------------------------------------------------------
 def test_findings_dedupe(app):
     run_cycle(trigger="test")
     run_cycle(trigger="test")
     rows = OverseerFinding.query.filter_by(code="no_live_articles").all()
     assert len(rows) == 1 and rows[0].occurrences == 2
+
+
+def test_open_finding_fingerprint_is_unique_and_resolved_findings_can_repeat(app):
+    finding = OverseerFinding(
+        fingerprint="systems|duplicate:test",
+        overseer="systems",
+        code="duplicate",
+        title="Duplicate finding",
+    )
+    run = OverseerRun(trigger="test")
+    db.session.add(run)
+    db.session.flush()
+    finding.first_run_id = run.id
+    db.session.add(finding)
+    db.session.commit()
+
+    from sqlalchemy.exc import IntegrityError
+
+    db.session.add(
+        OverseerFinding(
+            fingerprint=finding.fingerprint,
+            overseer="systems",
+            code="duplicate",
+            title="Duplicate finding",
+        )
+    )
+    with pytest.raises(IntegrityError):
+        db.session.commit()
+    db.session.rollback()
+
+    finding.status = "resolved"
+    db.session.commit()
+    db.session.add(
+        OverseerFinding(
+            fingerprint=finding.fingerprint,
+            overseer="systems",
+            code="duplicate",
+            title="Reopened finding",
+        )
+    )
+    db.session.commit()
+
+
+def test_sensor_failure_preserves_run_and_prior_findings(app):
+    class BrokenOverseer(BaseOverseer):
+        name = "broken"
+
+        def sense(self):
+            db.session.add(
+                OverseerFinding(
+                    fingerprint="broken|partial",
+                    overseer="broken",
+                    code="partial",
+                    title="Must roll back",
+                )
+            )
+            raise RuntimeError("sensor failure")
+
+    class HealthyOverseer(BaseOverseer):
+        name = "healthy"
+
+        def sense(self):
+            return [Finding(code="survived", title="Still recorded")]
+
+    result = run_cycle(trigger="test", auto_apply=False, overseers=[BrokenOverseer(), HealthyOverseer()])
+    run = db.session.get(OverseerRun, result["id"])
+    assert run is not None
+    assert OverseerFinding.query.filter_by(code="partial").count() == 0
+    assert OverseerFinding.query.filter_by(code="survived", status="open").count() == 1
 
 
 # 6 -------------------------------------------------------------------------
@@ -214,6 +312,52 @@ def test_compliance_disclosure_and_publish_gate(app, niche):
     assert codes.count("missing_amazon_disclosure") == 1
     assert "missing_link_disclosure" in codes
     assert codes.count("publish_gate_bypassed") == 1
+
+
+def test_link_disclosure_is_checked_per_amazon_link_block(app, niche):
+    p = _product(niche)
+    _article(
+        p,
+        status="published",
+        editorial_verdict="PUBLISH",
+        content=(
+            '<p>Buy <a href="https://amazon.com/dp/ONE">one</a> (affiliate link)</p>'
+            '<p>Buy <a href="https://amazon.com/dp/TWO">two</a></p>'
+            "<footer>This is an affiliate website.</footer>"
+        ),
+    )
+    findings = [f for f in ComplianceOverseer().sense() if f.code == "missing_link_disclosure"]
+    assert len(findings) == 1
+
+
+def test_link_disclosure_in_each_amazon_link_block_passes(app, niche):
+    p = _product(niche)
+    _article(
+        p,
+        status="published",
+        editorial_verdict="PUBLISH",
+        content=(
+            '<p><a href="https://amazon.com/dp/ONE">one</a> (affiliate link)</p>'
+            '<p><a href="https://amazon.com/dp/TWO">two</a> (paid link)</p>'
+        ),
+    )
+    findings = [f for f in ComplianceOverseer().sense() if f.code == "missing_link_disclosure"]
+    assert findings == []
+
+
+def test_footer_disclosure_does_not_cover_link_in_shared_container(app, niche):
+    p = _product(niche)
+    _article(
+        p,
+        status="published",
+        editorial_verdict="PUBLISH",
+        content=(
+            '<div><a href="https://amazon.com/dp/ONE">Buy one</a>'
+            "<footer>This is an affiliate website.</footer></div>"
+        ),
+    )
+    findings = [f for f in ComplianceOverseer().sense() if f.code == "missing_link_disclosure"]
+    assert len(findings) == 1
 
 
 def test_is_amazon_url():
@@ -270,6 +414,21 @@ def test_systems_flags_legacy_affiliate_endpoint_and_redundancies(app):
     assert "redundant_paths" in codes
 
 
+def test_unmetered_spend_requires_crewai_generation_marker(app, niche):
+    p = _product(niche)
+    a = _article(p, draft_sections_json='{"draft":"written"}')
+    db.session.add(CostEvent(article_id=a.id, stage="retrieval", model="embedding", cost_usd=0))
+    db.session.commit()
+    systems = SystemsOverseer()
+    assert "llm_spend_unmetered" in {f.code for f in systems.sense()}
+
+    db.session.add(
+        CostEvent(article_id=a.id, stage="crewai_generation", model="gpt-4o", cost_usd=0)
+    )
+    db.session.commit()
+    assert "llm_spend_unmetered" not in {f.code for f in systems.sense()}
+
+
 # 11 ------------------------------------------------------------------------
 def test_overseer_cannot_self_promote_risk(app):
     from src.overseers.actions import effective_risk
@@ -299,3 +458,25 @@ def test_token_guard(client, monkeypatch):
     assert client.post("/api/overseer/run", json={}).status_code == 401
     r = client.post("/api/overseer/run", json={"trigger": "grok_routine"}, headers={"X-Overseer-Token": "s3cret"})
     assert r.status_code == 200 and r.get_json()["run"]["trigger"] == "grok_routine"
+
+
+def test_mutating_routes_fail_closed_when_token_is_unconfigured(client, app, monkeypatch):
+    monkeypatch.delenv("OVERSEER_API_TOKEN", raising=False)
+    app.config["TESTING"] = False
+    response = client.post("/api/overseer/run", json={})
+    assert response.status_code == 503
+
+
+def test_invalid_overseer_interval_does_not_break_other_scheduled_jobs(monkeypatch):
+    class Scheduler:
+        def __init__(self):
+            self.jobs = []
+
+        def add_job(self, *args, **kwargs):
+            self.jobs.append((args, kwargs))
+
+    scheduler = Scheduler()
+    scheduler.add_job(lambda: None, trigger="cron", id="daily_analytics_ingest")
+    monkeypatch.setenv("OVERSEER_INTERVAL_MINUTES", "not-a-number")
+    _schedule_overseer_job(scheduler, lambda: None)
+    assert [job[1]["id"] for job in scheduler.jobs] == ["daily_analytics_ingest"]

@@ -23,10 +23,10 @@ from __future__ import annotations
 import json
 import logging
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, Optional, Tuple
 
-from src.models.overseer import OverseerAction, OverseerControl
+from src.models.overseer import OverseerAction, OverseerControl, OverseerDispatch
 from src.models.product import Article
 from src.models.user import db
 
@@ -120,8 +120,6 @@ def h_retry_article(params):
     a.current_stage = "stage_0"
     a.last_transition_at = datetime.utcnow()
     OverseerControl.set(f"retries:{a.id}", used + 1)
-    db.session.commit()
-    (FLOW_RUNNER or _default_flow_runner)(a.id)
     return {"article_id": a.id, "retry": used + 1, "budget": budget}, undo
 
 
@@ -226,8 +224,58 @@ HANDLERS: Dict[str, Handler] = {
 }
 
 
+def dispatch_pending_retries() -> None:
+    """Dispatch committed retries, leaving failed dispatches queued for retry."""
+    now = datetime.utcnow()
+    db.session.query(OverseerDispatch).filter(
+        OverseerDispatch.status == "dispatching",
+        OverseerDispatch.updated_at < now - timedelta(minutes=5),
+    ).update(
+        {OverseerDispatch.status: "pending"},
+        synchronize_session=False,
+    )
+    db.session.commit()
+
+    dispatch_ids = [
+        row.id
+        for row in OverseerDispatch.query.filter_by(status="pending")
+        .order_by(OverseerDispatch.id)
+        .all()
+    ]
+    for dispatch_id in dispatch_ids:
+        claimed = (
+            db.session.query(OverseerDispatch)
+            .filter_by(id=dispatch_id, status="pending")
+            .update(
+                {
+                    OverseerDispatch.status: "dispatching",
+                    OverseerDispatch.attempts: OverseerDispatch.attempts + 1,
+                    OverseerDispatch.updated_at: datetime.utcnow(),
+                },
+                synchronize_session=False,
+            )
+        )
+        db.session.commit()
+        if not claimed:
+            continue
+        dispatch = db.session.get(OverseerDispatch, dispatch_id)
+        try:
+            (FLOW_RUNNER or _default_flow_runner)(dispatch.article_id)
+        except Exception as e:
+            dispatch.status = "pending"
+            dispatch.last_error = str(e)[:500]
+            dispatch.updated_at = datetime.utcnow()
+            db.session.commit()
+            log.warning("Retry dispatch %s failed and will be retried: %s", dispatch.id, e)
+        else:
+            dispatch.status = "dispatched"
+            dispatch.last_error = None
+            dispatch.updated_at = datetime.utcnow()
+            db.session.commit()
+
+
 def apply_action(action: OverseerAction, *, by: str = "overseer") -> OverseerAction:
-    """Run one action through the gate. Commits."""
+    """Run one action through the gate. Commits before dispatching side effects."""
     if action.status not in ("proposed", "approved"):
         raise ActionError(f"action {action.id} is {action.status}")
     if action.status == "proposed" and action.risk != "auto":
@@ -241,6 +289,13 @@ def apply_action(action: OverseerAction, *, by: str = "overseer") -> OverseerAct
         action.applied_at = datetime.utcnow()
         action.result_json = json.dumps(result, default=str)
         action.undo_json = json.dumps(undo, default=str) if undo else None
+        if action.kind == "retry_article":
+            db.session.add(
+                OverseerDispatch(
+                    action_id=action.id,
+                    article_id=int(action.params["article_id"]),
+                )
+            )
         if action.decided_by is None:
             action.decided_by = by
             action.decided_at = action.applied_at
@@ -251,7 +306,13 @@ def apply_action(action: OverseerAction, *, by: str = "overseer") -> OverseerAct
         action.result_json = json.dumps({"error": str(e)[:500]})
         log.warning("Overseer action %s (%s) failed: %s", action.id, action.kind, e)
     db.session.commit()
+    if action.status == "applied" and action.kind == "retry_article":
+        try:
+            dispatch_pending_retries()
+        except Exception:
+            db.session.rollback()
+            log.exception("Retry action %s committed but its dispatch remains queued", action.id)
     return action
 
 
-__all__ = ["AUTO_SAFE", "HANDLERS", "apply_action", "effective_risk", "ActionError"]
+__all__ = ["AUTO_SAFE", "HANDLERS", "apply_action", "dispatch_pending_retries", "effective_risk", "ActionError"]

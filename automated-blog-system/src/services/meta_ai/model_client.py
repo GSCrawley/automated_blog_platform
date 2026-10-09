@@ -89,6 +89,11 @@ class MetaModelClient:
         **params: Any,
     ) -> ChatResult:
         model = model or self.text_model
+        if model.endswith("-contributor") and os.getenv("META_ALLOW_CONTRIBUTOR_TIER", "").lower() != "true":
+            raise MetaModelError(
+                f"{model} sends prompts to Meta for product improvement; "
+                "set META_ALLOW_CONTRIBUTOR_TIER=true to opt in."
+            )
         resp = self.http.post(
             f"{self.base_url}/chat/completions",
             headers=self._headers(),
