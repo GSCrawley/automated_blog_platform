@@ -10,7 +10,7 @@ branch — see *Foundation smoke test* below.
 cd automated-blog-system
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-FLASK_APP=src.main:create_app flask db upgrade   # 0001 → 0002 → 0003
+FLASK_APP=src.main:create_app flask db upgrade   # 0001 → … → 0006 (overseer layer)
 ```
 
 The migrations directory is `automated-blog-system/migrations/`. Three
@@ -61,7 +61,8 @@ source venv/bin/activate
 pytest -q test_ghost_publisher.py test_editor_verdict.py \
           test_observability.py test_article_crud.py \
           test_serp_forensics.py test_retrieval.py \
-          test_knowledge_base.py -k "not live"
+          test_knowledge_base.py test_overseer.py \
+          -k "not live"
 
 # Live Ghost smoke (creates a draft on a real Ghost instance)
 export GHOST_API_URL="https://your-ghost.example.com"

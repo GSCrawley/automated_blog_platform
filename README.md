@@ -99,7 +99,8 @@ prose ability.
 | #5a  | SERP Forensics + Pattern Library (the heart of the system)  | ✅ Shipped     |
 | #5b  | LanceDB retrieval unification                               | ✅ Shipped     |
 | #6   | Human-in-the-loop review + publish UI (only publish path)   | ✅ Shipped     |
-| #7   | Performance Feedback Loop (after ≥20 published articles)    | ⬜ Planned     |
+| #7   | Performance Feedback Loop (shipped as GitHub PR #17)         | ✅ Shipped     |
+| #21  | Overseer layer ([docs](docs/OVERSEER_LAYER.md))              | 🟨 Draft       |
 
 ---
 

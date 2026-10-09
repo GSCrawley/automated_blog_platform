@@ -152,6 +152,19 @@ class CostMeter:
 
         Called by :class:`BlogCreationFlow` before kicking off a new article.
         """
+        # PR #21 — the overseer layer can pause new flows (e.g. projected
+        # burn exceeds the cap). Fail open if the table isn't migrated yet.
+        try:
+            from src.models.overseer import OverseerControl  # noqa: WPS433
+
+            paused = OverseerControl.get("pipeline_paused")
+        except Exception:  # pragma: no cover
+            db.session.rollback()
+            paused = None
+        if paused and paused.get("paused"):
+            raise BudgetExceeded(
+                f"Pipeline paused by overseer: {paused.get('reason', 'no reason given')}"
+            )
         if CostMeter.is_month_over_budget():
             spent = CostMeter.total_for_month(_current_month())
             raise BudgetExceeded(
