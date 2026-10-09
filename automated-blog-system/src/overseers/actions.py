@@ -14,8 +14,8 @@ overseer requesting ``risk="auto"`` for anything else is downgraded to
 
 Never automatable (by design, not configuration):
 - publishing or unpublishing on Ghost
-- spending money
-- posting publicly
+- spending money (Meta campaigns are created PAUSED and still need approval)
+- posting publicly (Facebook Page)
 - code changes (engineering tickets go to a PR, not a hot patch)
 """
 from __future__ import annotations
@@ -182,6 +182,32 @@ def h_reject_action(params):
     return {"rejected": params["action_id"]}, None
 
 
+def h_create_meta_campaign_draft(params):
+    from src.overseers.compliance import is_amazon_url
+    from src.services.meta_ai import MetaMarketingClient
+
+    dest = params.get("destination_url", "")
+    if not dest or is_amazon_url(dest):
+        raise ActionError("destination must be the blog article URL, never Amazon")
+    a = _article(params)
+    body = MetaMarketingClient().create_campaign_draft(
+        f"[overseer] {a.title}"[:250], objective=params.get("objective", "OUTCOME_TRAFFIC")
+    )
+    cid = body.get("id")
+    return (
+        {"campaign_id": cid, "status": "PAUSED", "destination_url": dest,
+         "next": "Add ad set, creative and budget in Ads Manager, then activate."},
+        {"kind": "meta_campaign_status", "campaign_id": cid, "status": "ARCHIVED"},
+    )
+
+
+def h_distribute_to_facebook_page(params):
+    from src.services.meta_ai import MetaMarketingClient
+
+    body = MetaMarketingClient().post_link_to_page(params.get("message", ""), params["link"])
+    return {"post_id": body.get("id")}, {"kind": "manual", "note": "delete the Page post in Meta Business Suite"}
+
+
 HANDLERS: Dict[str, Handler] = {
     "notify_human": h_notify_human,
     "engineering_ticket": h_engineering_ticket,
@@ -194,6 +220,8 @@ HANDLERS: Dict[str, Handler] = {
     "pause_pipeline": h_pause_pipeline,
     "resume_pipeline": h_resume_pipeline,
     "reject_action": h_reject_action,
+    "create_meta_campaign_draft": h_create_meta_campaign_draft,
+    "distribute_to_facebook_page": h_distribute_to_facebook_page,
 }
 
 

@@ -1,11 +1,12 @@
 """Revenue Overseer — embodies the *Affiliate Funnel Management* function.
 
 Mandate: make sure every live article can earn, that earnings are actually
-observed (no blind feedback loop), and that traffic converts. Amplifying
-winners with Meta campaign drafts arrives in PR #22.
+observed (no blind feedback loop), and that winners get amplified — via
+Meta campaign *drafts* that a human activates.
 """
 from __future__ import annotations
 
+import os
 from collections import defaultdict
 from decimal import Decimal
 from typing import List
@@ -34,8 +35,8 @@ class RevenueOverseer(BaseOverseer):
     name = "revenue"
     function = "Affiliate Funnel Management"
     mandate = (
-        "Every live article monetized, every dollar observed, every click "
-        "given a chance to convert."
+        "Every live article monetized, every dollar observed, winners amplified "
+        "through human-approved Meta campaign drafts."
     )
 
     def sense(self) -> List[Finding]:
@@ -143,8 +144,10 @@ class RevenueOverseer(BaseOverseer):
 
     def _funnel(self, published: List[Article]) -> List[Finding]:
         out: List[Finding] = []
+        meta_ready = bool(os.getenv("META_AD_ACCOUNT_ID") and os.getenv("META_SYSTEM_USER_TOKEN"))
         ids = [a.id for a in published]
         perfs = ArticlePerformance.query.filter(ArticlePerformance.article_id.in_(ids)).all()
+        by_id = {a.id: a for a in published}
         for p in perfs:
             rev = Decimal(p.total_revenue_28d or 0)
             if (p.total_clicks_28d or 0) >= CLICKS_NO_SALE_MIN and rev == 0:
@@ -158,6 +161,29 @@ class RevenueOverseer(BaseOverseer):
                         subject_type="article",
                         subject_id=str(p.article_id),
                         actions=[ActionSpec("generate_improvement_proposals", {"article_id": p.article_id}, risk="auto")],
+                    )
+                )
+            a = by_id.get(p.article_id)
+            if p.performance_tier == "winner" and meta_ready and a is not None and a.published_url:
+                out.append(
+                    Finding(
+                        code="amplify_winner",
+                        title=f"Article {a.id} is a top performer; draft a Meta traffic campaign",
+                        severity="low",
+                        detail=(
+                            "Campaign is created PAUSED and points at the blog article, "
+                            "never at Amazon (Associates disqualifies purchases referred by "
+                            "paid ads linking to Amazon)."
+                        ),
+                        evidence={"roi": str(p.roi) if p.roi is not None else None, "revenue_28d": str(rev)},
+                        subject_type="article",
+                        subject_id=str(a.id),
+                        actions=[
+                            ActionSpec(
+                                "create_meta_campaign_draft",
+                                {"article_id": a.id, "destination_url": a.published_url, "objective": "OUTCOME_TRAFFIC"},
+                            )
+                        ],
                     )
                 )
         return out

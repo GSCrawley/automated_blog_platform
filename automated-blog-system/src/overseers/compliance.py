@@ -1,7 +1,7 @@
 """Compliance Overseer — cross-cutting guardrail for all five functions.
 
 Mandate: protect the accounts the revenue depends on (Amazon Associates,
-Google Search, and Meta Ads once PR #22 lands). It checks invariants and disclosures; it never
+Google Search, Meta Ads). It checks invariants and disclosures; it never
 edits content itself.
 
 Rules enforced
@@ -10,8 +10,9 @@ Rules enforced
 - Amazon Operating Agreement s.5: the site must state "As an Amazon
   Associate I earn from qualifying purchases."  FTC link-level disclosure
   is also required near affiliate links.
-- ``is_amazon_url`` is shared with PR #22, where it blocks paid ads that
-  link directly to Amazon (Apr 14 2026 Associates update).
+- Amazon Commission Income Statement (Apr 14 2026 update): purchases
+  referred by paid/boosted ads *linking to Amazon* are disqualified, so any
+  Meta campaign must point at the blog, never at Amazon or a redirect.
 """
 from __future__ import annotations
 
@@ -21,6 +22,7 @@ from html.parser import HTMLParser
 from typing import List
 from urllib.parse import urlparse
 
+from src.models.overseer import OverseerAction
 from src.models.product import Article
 from src.overseers.base import ActionSpec, BaseOverseer, Finding
 
@@ -139,6 +141,21 @@ class ComplianceOverseer(BaseOverseer):
                     )
                 )
 
+        for act in OverseerAction.query.filter(OverseerAction.kind == "create_meta_campaign_draft").all():
+            dest = act.params.get("destination_url", "")
+            if is_amazon_url(dest) and act.status in ("proposed", "approved"):
+                out.append(
+                    Finding(
+                        code="paid_ad_links_to_amazon",
+                        title=f"Meta campaign draft (action {act.id}) points directly at Amazon",
+                        severity="critical",
+                        category="compliance",
+                        detail="Amazon disqualifies purchases referred by paid ads linking to Amazon.",
+                        subject_type="overseer_action",
+                        subject_id=str(act.id),
+                        actions=[ActionSpec("reject_action", {"action_id": act.id}, risk="auto")],
+                    )
+                )
         return out
 
 

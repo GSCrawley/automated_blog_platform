@@ -153,12 +153,13 @@ class SystemsOverseer(BaseOverseer):
                         actions=[ActionSpec("notify_human", {"env": key}, risk="auto")],
                     )
                 )
-        llm_key = "OPENAI_API_KEY"
+        provider = (os.getenv("CONTENT_LLM_PROVIDER") or "openai").lower()
+        llm_key = "META_MODEL_API_KEY" if provider == "meta" else "OPENAI_API_KEY"
         if not (os.getenv(llm_key) or current_app.config.get(llm_key)):
             out.append(
                 Finding(
                     code="missing_config",
-                    title=f"{llm_key} is not set",
+                    title=f"{llm_key} is not set (CONTENT_LLM_PROVIDER={provider})",
                     severity="critical",
                     detail="The content pipeline has no LLM to call.",
                     subject_type="config",
