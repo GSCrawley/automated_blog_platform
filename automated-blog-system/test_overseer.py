@@ -174,7 +174,9 @@ def test_retry_requires_approval_and_respects_budget(app, client, niche, monkeyp
                          params_json=retry.params_json, status="approved")
     db.session.add(act)
     db.session.commit()
-    assert actions_mod.apply_action(act).status == "failed"
+    failed = actions_mod.apply_action(act)
+    assert failed.status == "failed"
+    assert failed.to_dict()["result"] == {"error": "action failed"}
     assert calls == [a.id]
 
 

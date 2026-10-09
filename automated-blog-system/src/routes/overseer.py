@@ -20,6 +20,7 @@ outside tests; production requests fail closed when it is absent.
 from __future__ import annotations
 
 import json
+import logging
 import os
 from datetime import date, datetime
 from functools import wraps
@@ -30,6 +31,7 @@ from src.models.overseer import OverseerAction, OverseerControl, OverseerFinding
 from src.models.user import db
 
 overseer_bp = Blueprint("overseer", __name__)
+log = logging.getLogger(__name__)
 
 
 def _err(msg: str, code: int):
@@ -184,7 +186,8 @@ def apply(aid):
     try:
         act = apply_action(act, by="human")
     except ActionError as e:
-        return _err(str(e), 409)
+        log.warning("Action %s could not be applied: %s", aid, e)
+        return _err("action cannot be applied", 409)
     return jsonify({"success": act.status == "applied", "action": act.to_dict()})
 
 

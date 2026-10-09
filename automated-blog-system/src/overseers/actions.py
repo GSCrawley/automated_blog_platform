@@ -149,7 +149,8 @@ def h_generate_improvement_proposals(params):
     try:
         created = generate_improvement_proposals(int(params["article_id"]))
     except Exception as e:  # no blueprint yet, etc.
-        return {"created": 0, "skipped": str(e)[:200]}, None
+        log.warning("Improvement proposal generation skipped: %s", e)
+        return {"created": 0, "skipped": "proposal generation unavailable"}, None
     return {"created": len(created), "review_at": "/api/review"}, None
 
 
@@ -303,7 +304,7 @@ def apply_action(action: OverseerAction, *, by: str = "overseer") -> OverseerAct
         db.session.rollback()
         action = db.session.get(OverseerAction, action.id)
         action.status = "failed"
-        action.result_json = json.dumps({"error": str(e)[:500]})
+        action.result_json = json.dumps({"error": "action failed"})
         log.warning("Overseer action %s (%s) failed: %s", action.id, action.kind, e)
     db.session.commit()
     if action.status == "applied" and action.kind == "retry_article":
