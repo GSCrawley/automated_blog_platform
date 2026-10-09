@@ -147,7 +147,7 @@ def approve(aid):
     if act is None:
         return _err("not found", 404)
     if act.status != "proposed":
-        return _err(f"action is {act.status}", 409)
+        return _err("action cannot be approved", 409)
     body = request.get_json(silent=True) or {}
     act.status = "approved"
     act.decided_by = body.get("by", "human")
@@ -165,7 +165,7 @@ def reject(aid):
     if act is None:
         return _err("not found", 404)
     if act.status not in ("proposed", "approved"):
-        return _err(f"action is {act.status}", 409)
+        return _err("action cannot be rejected", 409)
     body = request.get_json(silent=True) or {}
     act.status = "rejected"
     act.decided_by = body.get("by", "human")
@@ -243,7 +243,8 @@ def associates_csv():
         for_date = date.fromisoformat(d) if d else date.today()
         result = import_associates_csv(raw, for_date=for_date)
     except ValueError as e:
-        return _err(str(e), 400)
+        log.warning("Associates CSV import rejected: %s", e)
+        return _err("invalid Associates CSV request", 400)
     return jsonify({"success": True, **result})
 
 
