@@ -100,6 +100,37 @@ class CostMeter:
         return cost
 
     @staticmethod
+    def record_flat(
+        article_id: Optional[int],
+        stage: str,
+        model: str,
+        cost_usd: Decimal,
+    ) -> Decimal:
+        """Record a flat-priced call (e.g. one Muse Image generation).
+
+        PR #21. Same bookkeeping as :meth:`record`, zero tokens.
+        """
+        cost = Decimal(cost_usd).quantize(Decimal("0.000001"))
+        db.session.add(
+            CostEvent(
+                article_id=article_id,
+                stage=stage,
+                model=model,
+                prompt_tokens=0,
+                completion_tokens=0,
+                cost_usd=cost,
+            )
+        )
+        if article_id is not None:
+            article = db.session.get(Article, article_id)
+            if article is not None:
+                article.cost_usd = Decimal(article.cost_usd or 0) + cost
+        budget = _ensure_budget_row(_current_month())
+        budget.spent_usd = Decimal(budget.spent_usd or 0) + cost
+        db.session.commit()
+        return cost
+
+    @staticmethod
     def current_month() -> str:
         """Current month key (``YYYY-MM``, UTC). Public alias for callers
         that want CostMeter as the single source of truth for month logic."""
@@ -152,6 +183,19 @@ class CostMeter:
 
         Called by :class:`BlogCreationFlow` before kicking off a new article.
         """
+        # PR #21 — the overseer layer can pause new flows (e.g. projected
+        # burn exceeds the cap). Fail open if the table isn't migrated yet.
+        try:
+            from src.models.overseer import OverseerControl  # noqa: WPS433
+
+            paused = OverseerControl.get("pipeline_paused")
+        except Exception:  # pragma: no cover
+            db.session.rollback()
+            paused = None
+        if paused and paused.get("paused"):
+            raise BudgetExceeded(
+                f"Pipeline paused by overseer: {paused.get('reason', 'no reason given')}"
+            )
         if CostMeter.is_month_over_budget():
             spent = CostMeter.total_for_month(_current_month())
             raise BudgetExceeded(

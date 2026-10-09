@@ -1,7 +1,7 @@
 """LLM rate card (PR #3).
 
 Per-1K-token prices in **USD**. Sourced from public OpenAI pricing as of
-2026-04 — when prices change, edit this file (the only place rates live).
+2026-04 and Meta Model API pricing as of 2026-10 — when prices change, edit this file (the only place rates live).
 
 Embedding models charge for input tokens only; their ``completion`` cost is
 ``Decimal("0")``.
@@ -32,6 +32,12 @@ _RATES: Dict[str, Rate] = {
     "text-embedding-3-small": Rate(Decimal("0.00002"), Decimal("0")),
     "text-embedding-3-large": Rate(Decimal("0.00013"), Decimal("0")),
     "text-embedding-ada-002": Rate(Decimal("0.0001"), Decimal("0")),
+    # Meta Model API (PR #21) — dev.meta.ai/products/meta-model-api, 2026-10.
+    # $1.25 / $4.25 per 1M tokens (standard: prompts not used for training).
+    "muse-spark-1.3": Rate(Decimal("0.00125"), Decimal("0.00425")),
+    # $0.10 / $0.20 per 1M (contributor: prompts used to improve Meta products;
+    # MetaModelClient refuses this tier unless META_ALLOW_CONTRIBUTOR_TIER=true).
+    "muse-spark-1.3-contributor": Rate(Decimal("0.0001"), Decimal("0.0002")),
 }
 
 

@@ -17,6 +17,13 @@ from src.config import Config, TestConfig
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def _record_blueprint_error(app, name, exc):
+    """PR #21 — remember (not just print) route groups that failed to load,
+    so the Systems Overseer can surface them as critical findings."""
+    print(f"❌ Error registering {name} blueprint: {exc}")
+    app.extensions.setdefault("blueprint_errors", {})[name] = f"{type(exc).__name__}: {exc}"[:500]
+
+
 def create_app(testing: bool = False):
     # Set static_folder to the built React app directory
     app = Flask(__name__, static_folder='../static', static_url_path='/')
@@ -50,6 +57,12 @@ def create_app(testing: bool = False):
         ArticleBlueprintSnapshot,
         BlueprintProposal,
         ArticleImprovementProposal,
+    )
+    from src.models.overseer import (  # PR #21
+        OverseerRun,
+        OverseerFinding,
+        OverseerAction,
+        OverseerControl,
     )
 
     # Initialize Flask-Migrate (PR #3). The migrations/ directory lives at
@@ -101,56 +114,63 @@ def create_app(testing: bool = False):
         app.register_blueprint(user_bp, url_prefix='/api/user')
         print("✅ User blueprint registered successfully")
     except Exception as e:
-        print(f"❌ Error registering user blueprint: {e}")
+        _record_blueprint_error(app, "user", e)
 
     try:
         from src.routes.blog import blog_bp
         app.register_blueprint(blog_bp, url_prefix='/api/blog')
         print("✅ Blog blueprint registered successfully")
     except Exception as e:
-        print(f"❌ Error registering blog blueprint: {e}")
+        _record_blueprint_error(app, "blog", e)
 
     try:
         from src.routes.agent_routes import agent_bp
         app.register_blueprint(agent_bp, url_prefix='/api/agents')
         print("✅ Agent blueprint registered successfully")
     except Exception as e:
-        print(f"❌ Error registering agent blueprint: {e}")
+        _record_blueprint_error(app, "agent", e)
 
     try:
         from src.routes.automation import automation_bp
         app.register_blueprint(automation_bp, url_prefix='/api/automation')
         print("✅ Automation blueprint registered successfully")
     except Exception as e:
-        print(f"❌ Error registering automation blueprint: {e}")
+        _record_blueprint_error(app, "automation", e)
 
     try:
         from src.routes.publisher import publisher_bp
         app.register_blueprint(publisher_bp, url_prefix='/api/publisher')
         print("✅ Publisher blueprint registered successfully")
     except Exception as e:
-        print(f"❌ Error registering publisher blueprint: {e}")
+        _record_blueprint_error(app, "publisher", e)
 
     try:
         from src.routes.budget import budget_bp
         app.register_blueprint(budget_bp, url_prefix='/api/budget')
         print("✅ Budget blueprint registered successfully")
     except Exception as e:
-        print(f"❌ Error registering budget blueprint: {e}")
+        _record_blueprint_error(app, "budget", e)
 
     try:
         from src.routes.review import review_bp
         app.register_blueprint(review_bp, url_prefix='/api/review')
         print("✅ Review blueprint registered successfully")
     except Exception as e:
-        print(f"❌ Error registering review blueprint: {e}")
+        _record_blueprint_error(app, "review", e)
 
     try:
         from src.routes.proposals import proposals_bp
         app.register_blueprint(proposals_bp, url_prefix='/api/proposals')
         print("✅ Proposals blueprint registered successfully")
     except Exception as e:
-        print(f"❌ Error registering proposals blueprint: {e}")
+        _record_blueprint_error(app, "proposals", e)
+
+    try:
+        from src.routes.overseer import overseer_bp
+        app.register_blueprint(overseer_bp, url_prefix='/api/overseer')
+        print("✅ Overseer blueprint registered successfully")
+    except Exception as e:
+        _record_blueprint_error(app, "overseer", e)
 
     # PR #7 — daily analytics ingest job (APScheduler, fires at 06:00 local).
     # Only started in production mode; tests inject providers directly.
@@ -173,6 +193,21 @@ def create_app(testing: bool = False):
                 id="daily_analytics_ingest",
                 replace_existing=True,
             )
+            # PR #21 — overseer control loop.
+            overseer_minutes = int(os.getenv("OVERSEER_INTERVAL_MINUTES", "30"))
+            if overseer_minutes > 0:
+                def _overseer_job():
+                    with app.app_context():
+                        from src.overseers.chief import run_cycle
+                        run_cycle(trigger="schedule")
+
+                scheduler.add_job(
+                    _overseer_job,
+                    trigger="interval",
+                    minutes=overseer_minutes,
+                    id="overseer_cycle",
+                    replace_existing=True,
+                )
             scheduler.start()
             app.analytics_scheduler = scheduler
             print("✅ Analytics ingest scheduler started (daily at 06:00)")
