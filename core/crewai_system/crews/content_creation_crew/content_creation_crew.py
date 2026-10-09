@@ -5,7 +5,6 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from typing import List
 from core.crewai_system.knowledge_graph import TARGET_BLOG_KG
 from core.crewai_system.tools.affiliate_db_tool import AffiliateLinksLookupTool
-from core.crewai_system.llm_providers import llm_kwargs  # PR #21: Meta Muse Spark opt-in
 
 @CrewBase
 class ContentCreationCrew:
@@ -38,7 +37,6 @@ class ContentCreationCrew:
             memory=TARGET_BLOG_KG.scope("/target_blog"),
             verbose=True,
             max_iter=7,
-            **llm_kwargs(),
         )
 
     @agent
@@ -50,7 +48,6 @@ class ContentCreationCrew:
             memory=TARGET_BLOG_KG.scope("/target_blog/affiliate_programs"),
             verbose=True,
             max_iter=5,
-            **llm_kwargs(),
         )
 
     @task

@@ -115,7 +115,7 @@ def test_roster(client):
         "Affiliate Funnel Management",
     ):
         assert f in functions
-    assert "create_meta_campaign_draft" not in body["auto_safe"]
+    assert "unpublish_article" not in body["auto_safe"]
     assert "retry_article" not in body["auto_safe"]
 
 
@@ -435,7 +435,7 @@ def test_unmetered_spend_requires_crewai_generation_marker(app, niche):
 def test_overseer_cannot_self_promote_risk(app):
     from src.overseers.actions import effective_risk
 
-    assert effective_risk("create_meta_campaign_draft", "auto") == "approval"
+    assert effective_risk("archive_article", "auto") == "approval"
     assert effective_risk("unpublish_article", "auto") == "approval"
     assert effective_risk("notify_human", "auto") == "auto"
 

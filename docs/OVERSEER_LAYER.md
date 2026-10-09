@@ -2,6 +2,8 @@
 
 A supervisory control plane that runs the automated blog platform, finds what is broken or underperforming, and fixes what is safe to fix. Everything else goes to a human or to a pull request.
 
+The Meta AI integration (Muse Spark content, paused campaign drafts, Conversions API, Facebook Page distribution) is a separate PR, #22, stacked on this one. See `docs/META_AI_INTEGRATION.md` on that branch.
+
 The overseers never write articles and never publish. The CrewAI `BlogCreationFlow` still does the writing, and the human review gate (PR #6) is still the only way to publish.
 
 ## Why a layer and not more agents
@@ -16,9 +18,9 @@ The platform already has a writer pipeline (CrewAI), a judge (the four-axis Edit
 | `systems` | Custom Bot Development | Route groups that failed to load at startup, stuck or crashed pipeline runs, missing config, unmetered LLM spend, broken integrations, superseded files |
 | `content` | Programmatic Content Agency | Review-queue backlog, editorial axes that block more than 50% of articles, stale or thin live posts |
 | `market` | Automated E-commerce Research | Products below the $500 MSRP floor, products with no affiliate URL or tracking ID, niche pipelines in error |
-| `revenue` | Affiliate Funnel Management | Live articles with no affiliate link, tracking-ID collisions, missing earnings data, clicks without sales, winners worth amplifying |
-| `audience` | 24/7 Lead Generation | Articles with no Search Console impressions after 7 days, articles not yet shared to the Facebook Page |
-| `compliance` | Cross-cutting guardrail | Publish-gate bypass, missing Amazon Associate statement and link-level disclosure, paid ads pointing directly at Amazon |
+| `revenue` | Affiliate Funnel Management | Live articles with no affiliate link, tracking-ID collisions, missing earnings data, clicks without sales |
+| `audience` | 24/7 Lead Generation | Articles with no Search Console impressions after 7 days |
+| `compliance` | Cross-cutting guardrail | Publish-gate bypass, missing Amazon Associate statement and link-level disclosure |
 
 ## The loop
 
@@ -30,9 +32,9 @@ sense ──► diagnose ──► propose ──► gate ──► apply ──
              fingerprint) finding)     for human)   undo recipe)
 ```
 
-- Findings are deduplicated by fingerprint while open. A repeat increments `occurrences` instead of creating a new row.
+- Findings are deduplicated by fingerprint while open, backed by a partial unique index (`status = 'open'`). A repeat increments `occurrences` instead of creating a new row.
 - Each cycle is recorded in `overseer_runs` with counts and a top-10 summary.
-- If one overseer crashes, the others still run, and the crash becomes an `overseer_crashed` engineering finding.
+- Each overseer senses inside a savepoint. If one crashes, the others still run, its earlier findings are kept, and the crash becomes an `overseer_crashed` engineering finding.
 
 ## Risk gate
 
@@ -45,7 +47,7 @@ Only these handlers may run without approval (`AUTO_SAFE` in `src/overseers/acti
 | `generate_improvement_proposals` | Creates pending PR #7 proposals; it does not edit content | Dismiss proposals |
 | `refresh_performance` | Recomputes the 28-day roll-up | Idempotent |
 | `pause_pipeline` | Blocks new flows via `CostMeter.assert_can_start_flow` | Human resume |
-| `reject_action` | Compliance auto-rejects a non-compliant proposal | Re-propose |
+| `reject_action` | Compliance auto-rejects a non-compliant proposal (used by PR #22) | Re-propose |
 
 An overseer cannot promote itself: `effective_risk()` downgrades any other kind to `approval`.
 
@@ -53,33 +55,11 @@ The following are never automatic by design: publishing or unpublishing, spendin
 
 | Approval-gated action | Effect |
 |---|---|
-| `retry_article` | Resets to stage 0 and re-runs the flow. Enforces the GOALS.md retry budget of 2. |
+| `retry_article` | Resets to stage 0 and queues a durable `overseer_dispatches` row, which is committed before the flow runs. Failed dispatches stay queued and are retried on the next cycle without spending more retry budget (2, per GOALS.md). |
 | `archive_article` | Soft-delete (disposition after the retry budget is used up) |
 | `unpublish_article` | Ghost post back to draft (for publish-gate violations) |
 | `resume_pipeline` | Lifts an overseer pause |
 | `engineering_ticket` | On approval, lands in `GET /api/overseer/engineering-queue` for a coding agent to turn into a PR |
-| `create_meta_campaign_draft` | Creates a PAUSED Meta campaign pointing at the blog article |
-| `distribute_to_facebook_page` | Posts the article link to the Facebook Page |
-
-## Meta AI integration
-
-| Capability | Module | Notes |
-|---|---|---|
-| Muse Spark text | `src/services/meta_ai/model_client.py` | Uses the OpenAI-compatible `https://api.meta.ai/v1/chat/completions` endpoint. Metered through `CostMeter` at $1.25/$4.25 per 1M tokens. |
-| CrewAI writer on Muse Spark | `core/crewai_system/llm_providers.py` | Set `CONTENT_LLM_PROVIDER=meta` to switch the author and monetization agents. The default stays OpenAI. |
-| Muse Image | `MetaModelClient.generate_image` | Billed as a $0.01 flat-fee `CostEvent`. The response is tagged `ai_generated=true`. |
-| Contributor tier | Refused by default | About 12x cheaper, but Meta uses your prompts to improve its products. Opt in with `META_ALLOW_CONTRIBUTOR_TIER=true`. |
-| Campaign drafts | `marketing_client.create_campaign_draft` | Always `status=PAUSED`. Code can only pause or archive, never activate. Graph API version defaults to `v26.0`. |
-| Conversions API | `send_conversion_event` | Sends the newsletter signup as a `Lead` event. Email is SHA-256 hashed. `event_id` deduplicates against the browser Pixel. |
-| Page distribution | `post_link_to_page` | Feeds the GOALS.md "distribution routine fires at least once" requirement |
-
-### Amazon rule for paid traffic
-
-Amazon's April 14, 2026 policy update disqualifies purchases referred by paid or boosted ads linking to Amazon. Paid search may send users to your own site, but not directly to Amazon or through a redirecting link. The overseer layer enforces this in three places:
-
-1. The campaign handler refuses Amazon destinations.
-2. The compliance overseer auto-rejects any proposed draft that points at Amazon.
-3. Only winners with a `published_url` on the blog get proposed.
 
 ## Revenue signal fix
 
@@ -124,22 +104,11 @@ Routines must stay at least 5 minutes apart, with a maximum of 50 per Bot.
 |---|---|---|
 | `OVERSEER_INTERVAL_MINUTES` | `30` | Scheduler cadence. `0` disables it. |
 | `OVERSEER_AUTO_APPLY` | `true` | Global kill switch for auto-safe actions |
-| `OVERSEER_API_TOKEN` | unset | Required header for mutating endpoints when set |
+| `OVERSEER_API_TOKEN` | unset | Required for every mutating endpoint. Outside tests, those endpoints return 503 until it is set. |
 | `SITE_AFFILIATE_DISCLOSURE_PRESENT` | `false` | Set `true` once the Ghost theme carries the Amazon Associate statement |
-| `CONTENT_LLM_PROVIDER` | `openai` | `meta` switches the content crew to Muse Spark |
-| `META_MODEL_API_KEY`, `META_TEXT_MODEL`, `META_IMAGE_MODEL` | `muse-spark-1.3`, `muse-image-1.0` | Meta Model API |
-| `META_AD_ACCOUNT_ID`, `META_SYSTEM_USER_TOKEN`, `META_PIXEL_ID` | unset | Marketing API and Conversions API |
-| `META_PAGE_ID`, `META_PAGE_ACCESS_TOKEN` | unset | Page distribution |
-| `META_GRAPH_API_VERSION` | `v26.0` | Graph and Marketing API version |
 
 ## Sources
 
-- Meta Model API models, endpoints and pricing: https://dev.meta.ai/docs/overview, https://dev.meta.ai/products/meta-model-api
-- Graph/Marketing API v26.0 (July 29, 2026): https://www.blotato.com/blog/facebook-api-pricing
-- Campaign creation with `status=PAUSED` and `special_ad_categories`: https://developers.facebook.com/docs/marketing-api/reference/ad-campaign-group
-- Conversions API `/events` endpoint: https://developers.facebook.com/docs/marketing-api/conversions-api/using-the-api/
-- Amazon April 14, 2026 policy changes: https://affiliate-program.amazon.com/help/operating/compare
-- Amazon paid-search routing and Redirecting Links: https://affiliate-program.amazon.com/help/operating/policies
 - Amazon Associate statement (Operating Agreement section 5): https://affiliate-program.amazon.com/help/operating/agreement
 - Link-level FTC disclosure guidance: https://affiliate-program.amazon.com/help/node/topic/GHQNZAU6669EZS98
 - Creators API prerequisites: https://affiliate-program.amazon.com/creatorsapi/docs/

@@ -100,7 +100,7 @@ prose ability.
 | #5b  | LanceDB retrieval unification                               | ✅ Shipped     |
 | #6   | Human-in-the-loop review + publish UI (only publish path)   | ✅ Shipped     |
 | #7   | Performance Feedback Loop (shipped as GitHub PR #17)         | ✅ Shipped     |
-| #21  | Overseer layer + Meta AI integration ([docs](docs/OVERSEER_LAYER.md)) | 🟨 Draft       |
+| #21  | Overseer layer ([docs](docs/OVERSEER_LAYER.md))              | 🟨 Draft       |
 
 ---
 
