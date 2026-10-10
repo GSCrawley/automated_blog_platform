@@ -37,7 +37,7 @@ target Blueprint. Verdict is binary; every article ends at
       LLM-injectable with pass-stub default (no network in unit tests).
 - [x] `core/crewai_system/crews/editor_crew/editor_crew.py` rewritten as a
       pure-Python orchestrator (CrewAI dropped from the editor; legacy crew
-      preserved at `.pr2-backup/`).
+      preserved in git history).
 - [x] `automated-blog-system/src/services/editorial_review.py` —
       `run_editorial_review(article_id)` loads Article, runs review, persists
       verdict + report JSON, sets `current_stage = "awaiting_human_review"`.

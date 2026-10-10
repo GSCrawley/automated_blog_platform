@@ -454,10 +454,19 @@ def test_blueprint_failure_surfaces(app):
     assert len(f) == 1 and f[0].severity == "critical"
 
 
-def test_systems_flags_legacy_affiliate_endpoint_and_redundancies(app):
+def test_systems_flags_legacy_affiliate_endpoint_and_redundancies(app, tmp_path, monkeypatch):
+    import src.overseers.systems as systems_mod
+
     codes = {x.code for x in SystemsOverseer().sense()}
     assert "affiliate_ingest_endpoint_invalid" in codes
-    assert "redundant_paths" in codes
+    assert "redundant_paths" not in codes  # cleanup PR removed all superseded paths
+
+    (tmp_path / "dump.rdb").write_bytes(b"")
+    (tmp_path / "memory-bank").mkdir()
+    monkeypatch.setattr(systems_mod, "_repo_root", lambda: tmp_path)
+    found = [x for x in SystemsOverseer().sense() if x.code == "redundant_paths"]
+    assert len(found) == 1
+    assert sorted(found[0].evidence["paths"]) == ["dump.rdb", "memory-bank"]
 
 
 def test_unmetered_spend_requires_crewai_generation_marker(app, niche):

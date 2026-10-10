@@ -201,11 +201,11 @@ The doc's PR #6 §6.7 manual E2E. Run with a real Ghost instance:
 
 ## Rolling back a PR
 
-Every PR backs up its rewritten files to `.prN-backup/` preserving the
-original path. To revert PR N's local changes (e.g. `pr3-observability`):
+The old `.prN-backup/` folders were removed; git history is the record. To
+roll back a merged PR, revert its merge commit and downgrade the schema:
 
 ```bash
-cp -r .pr3-backup/* .
+git revert -m 1 <merge-commit-sha>
 FLASK_APP=src.main:create_app flask db downgrade <prev-revision>
 ```
 

@@ -22,7 +22,7 @@ as a TODO — :meth:`CostMeter.track` exposes the API the wrapper needs;
 the test path exercises CostMeter directly via :func:`record`. PR #3
 acceptance tests pass without the LLM wrap.
 
-Legacy versions are at ``.pr2-backup/`` and ``.pr3-backup/``.
+Legacy versions are in git history (pre-PR #2 and pre-PR #3).
 """
 from __future__ import annotations
 
