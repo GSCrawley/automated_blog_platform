@@ -167,6 +167,13 @@ def create_app(testing: bool = False):
         _record_blueprint_error(app, "publisher", e)
 
     try:
+        from src.routes.meta_webhooks import meta_webhook_bp
+        app.register_blueprint(meta_webhook_bp, url_prefix='/api/webhooks')
+        print("✅ Meta webhook blueprint registered successfully")
+    except Exception as e:
+        _record_blueprint_error(app, "meta_webhooks", e)
+
+    try:
         from src.routes.budget import budget_bp
         app.register_blueprint(budget_bp, url_prefix='/api/budget')
         print("✅ Budget blueprint registered successfully")

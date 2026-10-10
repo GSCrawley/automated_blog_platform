@@ -2,7 +2,7 @@
 
 A supervisory control plane that runs the automated blog platform, finds what is broken or underperforming, and fixes what is safe to fix. Everything else goes to a human or to a pull request.
 
-The Meta AI integration (Muse Spark content, paused campaign drafts, Conversions API, Facebook Page distribution) is a separate PR, #22, stacked on this one. See `docs/META_AI_INTEGRATION.md` on that branch.
+The Meta AI integration (Muse Spark content, paused campaign drafts, Conversions API, Facebook Page distribution) is a separate PR, #22, stacked on this one. See [`META_AI_INTEGRATION.md`](META_AI_INTEGRATION.md).
 
 The overseers never write articles and never publish. The CrewAI `BlogCreationFlow` still does the writing, and the human review gate (PR #6) is still the only way to publish.
 

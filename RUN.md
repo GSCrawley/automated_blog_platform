@@ -61,7 +61,7 @@ source venv/bin/activate
 pytest -q test_ghost_publisher.py test_editor_verdict.py \
           test_observability.py test_article_crud.py \
           test_serp_forensics.py test_retrieval.py \
-          test_knowledge_base.py test_overseer.py \
+          test_knowledge_base.py test_overseer.py test_meta_ai.py \
           -k "not live"
 
 # Live Ghost smoke (creates a draft on a real Ghost instance)

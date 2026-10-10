@@ -101,6 +101,7 @@ prose ability.
 | #6   | Human-in-the-loop review + publish UI (only publish path)   | ✅ Shipped     |
 | #7   | Performance Feedback Loop (shipped as GitHub PR #17)         | ✅ Shipped     |
 | #21  | Overseer layer ([docs](docs/OVERSEER_LAYER.md))              | 🟨 Draft       |
+| #22  | Meta AI integration, stacked on #21 ([docs](docs/META_AI_INTEGRATION.md)) | 🟨 Draft       |
 
 ---
 
