@@ -12,8 +12,7 @@ SQLAlchemy. It composes four axis evaluators (see :mod:`axes`) into an
 The verdict is **binary** — PUBLISH or REJECT. There is no automated revision
 loop; PR #6 puts a human in the loop on every article.
 
-The legacy CrewAI-driven EditorCrew lives at
-``.pr2-backup/core/crewai_system/crews/editor_crew/editor_crew.py``.
+The legacy CrewAI-driven EditorCrew is in git history (before PR #2).
 """
 from __future__ import annotations
 

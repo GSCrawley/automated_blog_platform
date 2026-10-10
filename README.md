@@ -205,15 +205,11 @@ automated_blog_platform/
 │   ├── scrapers/
 │   └── data/
 ├── blog-frontend/             # React 19 + Vite
-├── docs/                      # Agent rulebooks, architecture notes
-└── memory-bank/               # Development context
+└── docs/                      # Agent rulebooks, architecture notes
 ```
 
 ---
 
 ## Legacy WordPress
 
-`wordpress_service.py` remains as a migration stub that raises a clear error
-pointing callers to `GhostService`. WordPress-specific Article columns
-(`wordpress_post_id`) are retained for now but are no longer written; they
-will be dropped in PR #3 alongside the Alembic introduction.
+WordPress publishing was removed. Ghost is the only publisher (`GhostService`). The old `wordpress_service.py` stub and its test were deleted in the cleanup PR; `articles.wordpress_post_id` was dropped by migration 0002.

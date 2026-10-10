@@ -352,7 +352,7 @@ Each agent follows specific guidelines defined in `docs/agent_rulebooks/`:
 - Include future extension notes
 
 ### WordPress Deprecation
-The original WordPress integration has been removed in favor of headless architecture. The `wordpress_service.py` file remains as a stub to prevent import errors.
+The original WordPress integration has been removed in favor of headless architecture. The `wordpress_service.py` stub has been deleted; Ghost is the only publisher.
 
 ### Current Development Phase
 Focus areas (as per todo.md):
