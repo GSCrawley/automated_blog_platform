@@ -27,6 +27,7 @@ from sqlalchemy.exc import IntegrityError
 
 from src.models.overseer import OverseerAction, OverseerFinding, OverseerRun
 from src.models.user import db
+from src.overseers import author_model_gate
 from src.overseers.actions import apply_action, dispatch_pending_retries, effective_risk
 from src.overseers.audience import AudienceOverseer
 from src.overseers.base import SEVERITY_ORDER, ActionSpec, BaseOverseer, Finding
@@ -215,6 +216,16 @@ def run_cycle(
                     act.status = "superseded"
     db.session.commit()
 
+    # Author-model gate: Muse Spark for the author agent only after the whole
+    # system verifies (see src/overseers/author_model_gate.py).
+    crashed = sorted(o.name for o in roster if o.name not in healthy)
+    try:
+        author_model = author_model_gate.evaluate(now, crashed_overseers=crashed)
+    except Exception:
+        db.session.rollback()
+        log.exception("Author-model gate evaluation failed; author stays on the default model")
+        author_model = {"provider": "default", "error": "gate evaluation failed"}
+
     auto_applied = 0
     if _auto_apply_enabled(auto_apply):
         pending = (
@@ -241,6 +252,8 @@ def run_cycle(
         "awaiting_approval": OverseerAction.query.join(OverseerFinding)
         .filter(OverseerFinding.status == "open", OverseerAction.status == "proposed", OverseerAction.risk == "approval")
         .count(),
+        "author_model": {k: v for k, v in author_model.items() if k != "checks"},
+        "author_model_checks_failing": [c["check"] for c in author_model.get("checks", []) if not c["ok"]],
         "top": [{"id": r.id, "severity": r.severity, "overseer": r.overseer, "title": r.title} for r in top],
     }
     run.summary_json = json.dumps(summary)

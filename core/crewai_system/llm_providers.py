@@ -9,6 +9,13 @@
 
 The contributor tier (prompts used to improve Meta products) is refused
 unless ``META_ALLOW_CONTRIBUTOR_TIER=true``.
+
+Author agent (Oct 9, 2026 decision): ``author_llm_kwargs()`` moves only the
+author agent to Muse Spark, and only after the overseer layer has verified
+the whole system (``src/overseers/author_model_gate.py``). Until then it
+returns ``{}`` so the author keeps the current default. ``AUTHOR_LLM_PROVIDER``
+can be ``gated`` (default), ``default`` (never switch) or ``meta`` (force).
+``CONTENT_LLM_PROVIDER=meta`` still forces the whole content crew to Meta.
 """
 from __future__ import annotations
 
@@ -71,10 +78,7 @@ def _cost_meter_callback(model: str) -> object:
     return CostMeterCallback()
 
 
-def get_content_llm() -> Optional[object]:
-    provider = (os.getenv("CONTENT_LLM_PROVIDER") or "openai").lower()
-    if provider != "meta":
-        return None
+def _meta_llm() -> object:
     model = os.getenv("META_TEXT_MODEL", "muse-spark-1.3")
     if model.endswith("-contributor") and os.getenv("META_ALLOW_CONTRIBUTOR_TIER", "").lower() != "true":
         raise RuntimeError(f"{model} requires META_ALLOW_CONTRIBUTOR_TIER=true")
@@ -90,10 +94,48 @@ def get_content_llm() -> Optional[object]:
     )
 
 
+def get_content_llm() -> Optional[object]:
+    provider = (os.getenv("CONTENT_LLM_PROVIDER") or "openai").lower()
+    if provider != "meta":
+        return None
+    return _meta_llm()
+
+
+def _author_provider() -> str:
+    """``meta`` once the author-model gate has switched, else ``default``.
+
+    Any failure to read the gate (no app context, DB down) keeps the default:
+    the cheaper model is the safe fallback.
+    """
+    mode = (os.getenv("AUTHOR_LLM_PROVIDER") or "gated").lower()
+    if mode == "meta":
+        return "meta"
+    if mode == "default":
+        return "default"
+    try:
+        from src.overseers.author_model_gate import current_author_provider
+
+        return current_author_provider()
+    except Exception:
+        return "default"
+
+
+def get_author_llm() -> Optional[object]:
+    if (os.getenv("CONTENT_LLM_PROVIDER") or "openai").lower() == "meta":
+        return _meta_llm()
+    return _meta_llm() if _author_provider() == "meta" else None
+
+
+def author_llm_kwargs() -> dict:
+    """``Agent(**author_llm_kwargs())`` for the author agent only."""
+    llm = get_author_llm()
+    return {"llm": llm} if llm is not None else {}
+
+
 def llm_kwargs() -> dict:
     """``Agent(**llm_kwargs())`` — empty dict when the default provider is in use."""
     llm = get_content_llm()
     return {"llm": llm} if llm is not None else {}
 
 
-__all__ = ["get_content_llm", "llm_kwargs", "track_content_generation"]
+__all__ = ["author_llm_kwargs", "get_author_llm", "get_content_llm", "llm_kwargs", "track_content_generation"]
