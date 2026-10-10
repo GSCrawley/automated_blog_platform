@@ -5,7 +5,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from typing import List
 from core.crewai_system.knowledge_graph import TARGET_BLOG_KG
 from core.crewai_system.tools.affiliate_db_tool import AffiliateLinksLookupTool
-from core.crewai_system.llm_providers import llm_kwargs  # PR #22: Meta Muse Spark opt-in
+from core.crewai_system.llm_providers import author_llm_kwargs, llm_kwargs  # Muse Spark: author agent gated on system verification
 
 @CrewBase
 class ContentCreationCrew:
@@ -38,7 +38,7 @@ class ContentCreationCrew:
             memory=TARGET_BLOG_KG.scope("/target_blog"),
             verbose=True,
             max_iter=7,
-            **llm_kwargs(),
+            **author_llm_kwargs(),
         )
 
     @agent

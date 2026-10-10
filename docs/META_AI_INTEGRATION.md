@@ -7,9 +7,28 @@ This PR is stacked on PR #21, the overseer layer. It adds Meta's content models 
 | Capability | Module | Notes |
 |---|---|---|
 | Muse Spark text | `src/services/meta_ai/model_client.py` | Calls the OpenAI-compatible `https://api.meta.ai/v1/chat/completions` endpoint. Every call goes through `CostMeter` at $1.25 input and $4.25 output per 1M tokens. |
-| CrewAI writer on Muse Spark | `core/crewai_system/llm_providers.py` | `CONTENT_LLM_PROVIDER=meta` switches the author and monetization agents to Muse Spark. CrewAI success callbacks record token usage against the active article at `crewai_generation`. The default stays OpenAI. |
+| Author agent on Muse Spark | `core/crewai_system/llm_providers.py`, `src/overseers/author_model_gate.py` | The author agent moves to Muse Spark automatically once the overseers verify the whole system (see below). The monetization specialist and research crews stay on the default. `CONTENT_LLM_PROVIDER=meta` still forces the whole content crew to Meta. CrewAI success callbacks record Muse Spark token usage against the active article at `crewai_generation`. |
 | Muse Image | `MetaModelClient.generate_image` | Recorded as a $0.01 flat-fee `CostEvent` through `CostMeter.record_flat`. Responses are tagged `ai_generated=true`. |
 | Contributor tier | Refused by default, both when the client is built and on each `chat()` call | About 12x cheaper, but Meta uses the prompts to improve its products. Opt in with `META_ALLOW_CONTRIBUTOR_TIER=true`. |
+
+## Author-model gate
+
+Decision of Oct 9, 2026: use Muse Spark for the author agent once the whole system has been verified to work, and the current default until then. The Chief overseer checks the gate on every cycle. The author switches only when all of these have held for `AUTHOR_MODEL_STABLE_HOURS` (default 24):
+
+| Check | Passes when |
+|---|---|
+| `overseers_healthy` | No overseer crashed this cycle |
+| `no_open_critical_or_high_findings` | No open critical or high finding anywhere |
+| `live_article_on_ghost` | A published article has a live URL (GOALS.md Definition of Done) |
+| `distribution_fired` | A Facebook Page post was applied (Definition of Done) |
+| `search_impressions_recorded` | Search Console impressions exist (Definition of Done) |
+| `generation_spend_metered` | `crewai_generation` cost events exist, so the $100 cap sees real spend |
+| `affiliate_earnings_ingested` | At least one affiliate earnings row was imported |
+| `meta_api_key_configured` | `META_MODEL_API_KEY` is set |
+
+Default-model generation spend is not metered yet (overseer finding `llm_spend_unmetered`), so the gate cannot pass until that engineering ticket is fixed. That is intended: the switch makes each article about 7x more expensive, so the budget guard has to see it first.
+
+The switch is sticky, so a later fault does not change models mid-run. `GET /api/overseer/author-model` shows the current provider and every check. `POST /api/overseer/controls/author-model/revert` puts the author back on the default and locks the gate. `POST /api/overseer/controls/author-model/rearm` clears the lock. Both need `X-Overseer-Token`. `AUTHOR_LLM_PROVIDER` overrides the gate: `gated` (default), `default` (never switch), or `meta` (switch now).
 
 ## Advertising and distribution
 
@@ -29,7 +48,7 @@ The Graph API version defaults to `v26.0` and can be changed with `META_GRAPH_AP
 | Audience | `not_distributed`: a live article not yet shared to the Page | `distribute_to_facebook_page` | Needs approval |
 | Audience | `distribution_unconfigured`: articles are live but only one Page credential is set | `notify_human` | Auto |
 | Compliance | `paid_ad_links_to_amazon`: a proposed or approved campaign draft points at Amazon | `reject_action` | Auto |
-| Systems | `missing_config`: `CONTENT_LLM_PROVIDER=meta` is set but `META_MODEL_API_KEY` is not | `notify_human` | Auto |
+| Systems | `missing_config`: `CONTENT_LLM_PROVIDER=meta` is set, or the author agent has switched, but `META_MODEL_API_KEY` is not | `notify_human` | Auto |
 
 Neither Meta action is in `AUTO_SAFE`. `effective_risk()` downgrades both to `approval`, and a test pins this behavior.
 
@@ -47,7 +66,9 @@ Whether a social ad that lands on a blog article with Amazon links is fully safe
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `CONTENT_LLM_PROVIDER` | `openai` | Set to `meta` to switch the content crew to Muse Spark |
+| `CONTENT_LLM_PROVIDER` | `openai` | Set to `meta` to force the whole content crew to Muse Spark |
+| `AUTHOR_LLM_PROVIDER` | `gated` | Author agent: `gated` switches after verification, `default` never switches, `meta` switches now |
+| `AUTHOR_MODEL_STABLE_HOURS` | `24` | How long every verification check must hold before the author switches |
 | `META_MODEL_API_KEY` | unset | Meta Model API key |
 | `META_MODEL_API_BASE` | `https://api.meta.ai/v1` | Model API base URL |
 | `META_TEXT_MODEL`, `META_IMAGE_MODEL` | `muse-spark-1.3`, `muse-image-1.0` | Model IDs |

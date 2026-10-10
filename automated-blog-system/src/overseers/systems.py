@@ -153,20 +153,30 @@ class SystemsOverseer(BaseOverseer):
                         actions=[ActionSpec("notify_human", {"env": key}, risk="auto")],
                     )
                 )
+        from src.overseers.author_model_gate import current_author_provider
+
         provider = (os.getenv("CONTENT_LLM_PROVIDER") or "openai").lower()
-        llm_key = "META_MODEL_API_KEY" if provider == "meta" else "OPENAI_API_KEY"
-        if not (os.getenv(llm_key) or current_app.config.get(llm_key)):
-            out.append(
-                Finding(
-                    code="missing_config",
-                    title=f"{llm_key} is not set (CONTENT_LLM_PROVIDER={provider})",
-                    severity="critical",
-                    detail="The content pipeline has no LLM to call.",
-                    subject_type="config",
-                    subject_id=llm_key,
-                    actions=[ActionSpec("notify_human", {"env": llm_key}, risk="auto")],
+        author = "meta" if provider == "meta" else current_author_provider()
+        # The default model always backs the monetization and research agents;
+        # Meta is needed only when the author agent (or the whole crew) runs on it.
+        needed = {"OPENAI_API_KEY": f"CONTENT_LLM_PROVIDER={provider}"}
+        if provider == "meta":
+            needed = {"META_MODEL_API_KEY": "CONTENT_LLM_PROVIDER=meta"}
+        elif author == "meta":
+            needed["META_MODEL_API_KEY"] = "author agent switched to Muse Spark"
+        for llm_key, why in needed.items():
+            if not (os.getenv(llm_key) or current_app.config.get(llm_key)):
+                out.append(
+                    Finding(
+                        code="missing_config",
+                        title=f"{llm_key} is not set ({why})",
+                        severity="critical",
+                        detail="The content pipeline has no LLM to call.",
+                        subject_type="config",
+                        subject_id=llm_key,
+                        actions=[ActionSpec("notify_human", {"env": llm_key}, risk="auto")],
+                    )
                 )
-            )
         return out
 
     def _unmetered_spend(self) -> List[Finding]:

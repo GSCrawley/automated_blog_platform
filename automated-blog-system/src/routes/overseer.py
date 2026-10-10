@@ -12,6 +12,9 @@
     POST /actions/<id>/apply             apply an already-approved action
     GET  /engineering-queue              approved engineering tickets (JSON or ?format=md)
     POST /controls/pipeline/resume       human-only resume after an overseer pause
+    GET  /author-model                   author-agent model gate: provider + verification checks
+    POST /controls/author-model/revert   human: put the author back on the default model (locks the gate)
+    POST /controls/author-model/rearm    human: clear a revert so the gate can verify again
     POST /revenue/associates-csv         body = Associates Central CSV; ?date=YYYY-MM-DD
 
 Mutating endpoints require ``X-Overseer-Token``. The token must be configured
@@ -228,6 +231,32 @@ def resume_pipeline():
     OverseerControl.set("pipeline_paused", {"paused": False, "reason": body.get("reason", "resumed by human")}, by=body.get("by", "human"))
     db.session.commit()
     return jsonify({"success": True, "pipeline_paused": OverseerControl.get("pipeline_paused")})
+
+
+@overseer_bp.get("/author-model")
+def author_model():
+    from src.overseers import author_model_gate
+
+    return jsonify({"success": True, "author_model": author_model_gate.status()})
+
+
+@overseer_bp.post("/controls/author-model/revert")
+@_guarded
+def author_model_revert():
+    from src.overseers import author_model_gate
+
+    body = request.get_json(silent=True) or {}
+    state = author_model_gate.revert(by=body.get("by", "human"), reason=body.get("reason", "reverted by human"))
+    return jsonify({"success": True, "author_model": state})
+
+
+@overseer_bp.post("/controls/author-model/rearm")
+@_guarded
+def author_model_rearm():
+    from src.overseers import author_model_gate
+
+    body = request.get_json(silent=True) or {}
+    return jsonify({"success": True, "author_model": author_model_gate.rearm(by=body.get("by", "human"))})
 
 
 @overseer_bp.post("/revenue/associates-csv")
