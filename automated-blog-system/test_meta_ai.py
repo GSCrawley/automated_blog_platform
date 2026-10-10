@@ -13,8 +13,12 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import hmac
 import os
 import sys
+import time
+from types import SimpleNamespace
 from decimal import Decimal
 from pathlib import Path
 from urllib.parse import parse_qs
@@ -35,6 +39,7 @@ from src.models.overseer import OverseerAction, OverseerFinding  # noqa: E402
 from src.models.product import Article, Product  # noqa: E402
 from src.models.user import db  # noqa: E402
 from src.services.meta_ai import MetaGraphError, MetaMarketingClient, MetaModelClient, MetaModelError  # noqa: E402
+from core.crewai_system.llm_providers import get_content_llm, track_content_generation  # noqa: E402
 
 
 @pytest.fixture()
@@ -177,3 +182,84 @@ def test_meta_actions_are_never_auto(app):
     for kind in ("create_meta_campaign_draft", "distribute_to_facebook_page"):
         assert kind in HANDLERS and kind not in AUTO_SAFE
         assert effective_risk(kind, "auto") == "approval"
+
+
+@resp_lib.activate
+def test_ghost_newsletter_webhook_sends_lead_with_request_metadata(app, meta_env, monkeypatch):
+    secret = "ghost-webhook-secret"
+    monkeypatch.setenv("GHOST_WEBHOOK_SECRET", secret)
+    resp_lib.add(
+        resp_lib.POST,
+        "https://graph.facebook.com/v26.0/999/events",
+        json={"events_received": 1},
+    )
+    body = json.dumps(
+        {
+            "member": {"id": "member-42", "email": "Reader@Example.com"},
+            "event_source_url": "https://deskcred.blog/newsletter",
+        }
+    )
+    timestamp = str(int(time.time() * 1000))
+    digest = hmac.new(
+        secret.encode(), (body + timestamp).encode(), hashlib.sha256
+    ).hexdigest()
+    response = app.test_client().post(
+        "/api/webhooks/ghost/newsletter-signup",
+        data=body,
+        content_type="application/json",
+        headers={
+            "X-Ghost-Signature": f"sha256={digest}, t={timestamp}",
+            "User-Agent": "Ghost signup client",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["event_id"] == "ghost-member-member-42"
+    event = json.loads(_form(resp_lib.calls[0])["data"])[0]
+    assert event["event_name"] == "Lead"
+    assert event["event_source_url"] == "https://deskcred.blog/newsletter"
+    assert event["event_id"] == "ghost-member-member-42"
+    assert event["user_data"]["client_user_agent"] == "Ghost signup client"
+
+
+def test_ghost_newsletter_webhook_requires_configured_token(app, monkeypatch):
+    monkeypatch.delenv("GHOST_WEBHOOK_SECRET", raising=False)
+    response = app.test_client().post("/api/webhooks/ghost/newsletter-signup", json={})
+    assert response.status_code == 503
+
+    monkeypatch.setenv("GHOST_WEBHOOK_SECRET", "configured")
+    response = app.test_client().post(
+        "/api/webhooks/ghost/newsletter-signup",
+        json={},
+        headers={"X-Ghost-Signature": "sha256=incorrect, t=0"},
+    )
+    assert response.status_code == 401
+
+
+def test_crewai_meta_calls_are_metered_for_current_article(app, meta_env, monkeypatch):
+    monkeypatch.setenv("CONTENT_LLM_PROVIDER", "meta")
+    niche = Niche(name="Metered content test")
+    db.session.add(niche)
+    db.session.commit()
+    product = Product(name="Desk", price=500, niche_id=niche.id)
+    db.session.add(product)
+    db.session.commit()
+    article = Article(title="Desk", content="", product_id=product.id, niche_id=niche.id)
+    db.session.add(article)
+    db.session.commit()
+
+    with track_content_generation(article.id):
+        llm = get_content_llm()
+        llm.callbacks[0].log_success_event(
+            kwargs={},
+            response_obj=SimpleNamespace(
+                usage=SimpleNamespace(prompt_tokens=100, completion_tokens=50)
+            ),
+            start_time=0,
+            end_time=0,
+        )
+
+    event = CostEvent.query.one()
+    assert event.article_id == article.id
+    assert event.stage == "crewai_generation"
+    assert event.model == "muse-spark-1.3"

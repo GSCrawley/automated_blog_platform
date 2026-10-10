@@ -22,7 +22,7 @@ INDEXING_GRACE_DAYS = 7  # GOALS.md DoD: GSC impressions recorded after 7 days
 
 def _already_distributed(article_id: int) -> bool:
     for a in OverseerAction.query.filter(OverseerAction.kind == "distribute_to_facebook_page").all():
-        if a.params.get("article_id") == article_id and a.status in ("proposed", "approved", "applied", "verified"):
+        if a.params.get("article_id") == article_id and a.status in ("applied", "verified"):
             return True
     return False
 
@@ -38,7 +38,9 @@ class AudienceOverseer(BaseOverseer):
     def sense(self) -> List[Finding]:
         out: List[Finding] = []
         published = Article.query.filter(Article.status == "published").all()
-        page_ready = bool(os.getenv("META_PAGE_ID") and os.getenv("META_PAGE_ACCESS_TOKEN"))
+        page_id_configured = bool(os.getenv("META_PAGE_ID"))
+        page_token_configured = bool(os.getenv("META_PAGE_ACCESS_TOKEN"))
+        page_ready = page_id_configured and page_token_configured
 
         for a in published:
             gsc_rows = (
@@ -78,13 +80,13 @@ class AudienceOverseer(BaseOverseer):
                     )
                 )
 
-        if published and not page_ready:
+        if published and page_id_configured != page_token_configured:
             out.append(
                 Finding(
                     code="distribution_unconfigured",
-                    title="No distribution channel configured",
+                    title="Facebook Page distribution is partially configured",
                     severity="medium",
-                    detail="Set META_PAGE_ID and META_PAGE_ACCESS_TOKEN to enable Facebook Page distribution.",
+                    detail="Set both META_PAGE_ID and META_PAGE_ACCESS_TOKEN to enable Facebook Page distribution.",
                     subject_type="config",
                     subject_id="META_PAGE_ID",
                     actions=[ActionSpec("notify_human", {"env": "META_PAGE_ID"}, risk="auto")],

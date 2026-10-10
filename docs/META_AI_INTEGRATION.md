@@ -7,7 +7,7 @@ This PR is stacked on PR #21, the overseer layer. It adds Meta's content models 
 | Capability | Module | Notes |
 |---|---|---|
 | Muse Spark text | `src/services/meta_ai/model_client.py` | Calls the OpenAI-compatible `https://api.meta.ai/v1/chat/completions` endpoint. Every call goes through `CostMeter` at $1.25 input and $4.25 output per 1M tokens. |
-| CrewAI writer on Muse Spark | `core/crewai_system/llm_providers.py` | `CONTENT_LLM_PROVIDER=meta` switches the author and monetization agents to Muse Spark. The default stays OpenAI. |
+| CrewAI writer on Muse Spark | `core/crewai_system/llm_providers.py` | `CONTENT_LLM_PROVIDER=meta` switches the author and monetization agents to Muse Spark. CrewAI success callbacks record token usage against the active article at `crewai_generation`. The default stays OpenAI. |
 | Muse Image | `MetaModelClient.generate_image` | Recorded as a $0.01 flat-fee `CostEvent` through `CostMeter.record_flat`. Responses are tagged `ai_generated=true`. |
 | Contributor tier | Refused by default, both when the client is built and on each `chat()` call | About 12x cheaper, but Meta uses the prompts to improve its products. Opt in with `META_ALLOW_CONTRIBUTOR_TIER=true`. |
 
@@ -16,7 +16,7 @@ This PR is stacked on PR #21, the overseer layer. It adds Meta's content models 
 | Capability | Module | Notes |
 |---|---|---|
 | Campaign drafts | `MetaMarketingClient.create_campaign_draft` | Always created with `status=PAUSED`. Objectives are limited to traffic, leads, engagement and awareness. Code can only pause or archive a campaign, never activate one. |
-| Conversions API | `send_conversion_event` | Sends the newsletter signup as a `Lead` event. Email is SHA-256 hashed, and `client_user_agent` is required for website events. `event_id` deduplicates against the browser Pixel. |
+| Conversions API | `POST /api/webhooks/ghost/newsletter-signup` | A Ghost `member.added` webhook sends a `Lead` event with the request user agent and a stable ID based on the Ghost member ID (or normalized email when absent). Configure Ghost's webhook secret to match `GHOST_WEBHOOK_SECRET`; include `member.email` and preferably `member.id` in the JSON body. `event_source_url` is optional and defaults to `GHOST_API_URL`. Email is SHA-256 hashed by the client. |
 | Page distribution | `post_link_to_page` | Meets the GOALS.md requirement that the distribution routine fires at least once per post |
 
 The Graph API version defaults to `v26.0` and can be changed with `META_GRAPH_API_VERSION`.
@@ -27,7 +27,7 @@ The Graph API version defaults to `v26.0` and can be changed with `META_GRAPH_AP
 |---|---|---|---|
 | Revenue | `amplify_winner`: an article in the `winner` performance tier, with a live blog URL | `create_meta_campaign_draft` aimed at the blog article | Needs approval |
 | Audience | `not_distributed`: a live article not yet shared to the Page | `distribute_to_facebook_page` | Needs approval |
-| Audience | `distribution_unconfigured`: articles are live but no Page credentials are set | `notify_human` | Auto |
+| Audience | `distribution_unconfigured`: articles are live but only one Page credential is set | `notify_human` | Auto |
 | Compliance | `paid_ad_links_to_amazon`: a proposed or approved campaign draft points at Amazon | `reject_action` | Auto |
 | Systems | `missing_config`: `CONTENT_LLM_PROVIDER=meta` is set but `META_MODEL_API_KEY` is not | `notify_human` | Auto |
 
@@ -55,6 +55,7 @@ Whether a social ad that lands on a blog article with Amazon links is fully safe
 | `META_AD_ACCOUNT_ID`, `META_SYSTEM_USER_TOKEN` | unset | Marketing API. Both must be set before `amplify_winner` can fire. |
 | `META_PIXEL_ID` | unset | Conversions API |
 | `META_PAGE_ID`, `META_PAGE_ACCESS_TOKEN` | unset | Page distribution |
+| `GHOST_WEBHOOK_SECRET` | unset | Secret used to verify the Ghost member webhook signature |
 | `META_GRAPH_API_VERSION` | `v26.0` | Graph and Marketing API version |
 
 ## Sources

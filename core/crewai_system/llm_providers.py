@@ -12,8 +12,63 @@ unless ``META_ALLOW_CONTRIBUTOR_TIER=true``.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
+from contextvars import ContextVar
 import os
-from typing import Optional
+from typing import Iterator, Optional
+
+
+_CURRENT_ARTICLE_ID: ContextVar[Optional[int]] = ContextVar(
+    "current_crewai_article_id", default=None
+)
+
+
+@contextmanager
+def track_content_generation(article_id: Optional[int]) -> Iterator[None]:
+    token = _CURRENT_ARTICLE_ID.set(article_id)
+    try:
+        yield
+    finally:
+        _CURRENT_ARTICLE_ID.reset(token)
+
+
+def _cost_meter_callback(model: str) -> object:
+    from litellm.integrations.custom_logger import CustomLogger
+
+    class CostMeterCallback(CustomLogger):
+        def log_success_event(self, kwargs, response_obj, start_time, end_time):
+            article_id = _CURRENT_ARTICLE_ID.get()
+            if article_id is None:
+                return
+            usage = (
+                response_obj.get("usage")
+                if isinstance(response_obj, dict)
+                else getattr(response_obj, "usage", None)
+            )
+            if usage is None:
+                usage = (getattr(response_obj, "model_extra", None) or {}).get("usage")
+            if isinstance(usage, dict):
+                prompt_tokens = usage.get("prompt_tokens", usage.get("input_tokens"))
+                completion_tokens = usage.get(
+                    "completion_tokens", usage.get("output_tokens")
+                )
+            else:
+                prompt_tokens = getattr(usage, "prompt_tokens", None)
+                completion_tokens = getattr(usage, "completion_tokens", None)
+            if prompt_tokens is None or completion_tokens is None:
+                return
+
+            from src.services.cost_meter import CostMeter
+
+            CostMeter.record(
+                article_id,
+                "crewai_generation",
+                model,
+                int(prompt_tokens),
+                int(completion_tokens),
+            )
+
+    return CostMeterCallback()
 
 
 def get_content_llm() -> Optional[object]:
@@ -30,6 +85,8 @@ def get_content_llm() -> Optional[object]:
         base_url=os.getenv("META_MODEL_API_BASE", "https://api.meta.ai/v1"),
         api_key=os.getenv("META_MODEL_API_KEY"),
         temperature=float(os.getenv("META_TEXT_TEMPERATURE", "0.6")),
+        is_litellm=True,
+        callbacks=[_cost_meter_callback(model)],
     )
 
 
@@ -39,4 +96,4 @@ def llm_kwargs() -> dict:
     return {"llm": llm} if llm is not None else {}
 
 
-__all__ = ["get_content_llm", "llm_kwargs"]
+__all__ = ["get_content_llm", "llm_kwargs", "track_content_generation"]

@@ -40,6 +40,7 @@ from core.crewai_system.crews.content_creation_crew.content_creation_crew import
     ContentCreationCrew,
 )
 from core.crewai_system.knowledge_graph import TARGET_BLOG_KG
+from core.crewai_system.llm_providers import track_content_generation
 
 log = logging.getLogger(__name__)
 
@@ -201,13 +202,14 @@ class BlogCreationFlow(Flow[BlogCreationState]):
         if self.state.halted:
             return
         log.info("[BlogCreationFlow] Stage 2: Writing '%s'", self.state.current_topic)
-        result = ContentCreationCrew().crew().kickoff(
-            inputs={
-                "niche": self.state.niche,
-                "topic": self.state.current_topic,
-                "content_plan_context": str(self.state.content_plan),
-            }
-        )
+        with track_content_generation(self.state.current_article_id):
+            result = ContentCreationCrew().crew().kickoff(
+                inputs={
+                    "niche": self.state.niche,
+                    "topic": self.state.current_topic,
+                    "content_plan_context": str(self.state.content_plan),
+                }
+            )
         self.state.article_draft = result.raw
         self.state.pipeline_status = "editorial_phase"
         if _persist_and_check(

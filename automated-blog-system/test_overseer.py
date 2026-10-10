@@ -19,6 +19,7 @@ Coverage:
 from __future__ import annotations
 
 import os
+import json
 import sys
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -44,6 +45,7 @@ from src.models.user import db  # noqa: E402
 from src.overseers import actions as actions_mod  # noqa: E402
 from src.overseers.chief import ChiefOverseer, run_cycle  # noqa: E402
 from src.overseers.base import BaseOverseer, Finding  # noqa: E402
+from src.overseers.audience import AudienceOverseer  # noqa: E402
 from src.overseers.compliance import ComplianceOverseer  # noqa: E402
 from src.overseers.revenue import RevenueOverseer  # noqa: E402
 from src.overseers.systems import SystemsOverseer  # noqa: E402
@@ -99,6 +101,48 @@ def _article(product, **kw):
 
 def _open(code):
     return OverseerFinding.query.filter_by(code=code, status="open").all()
+
+
+def test_audience_distribution_needs_completed_action_and_partial_config(app, niche, monkeypatch):
+    monkeypatch.delenv("META_PAGE_ID", raising=False)
+    monkeypatch.delenv("META_PAGE_ACCESS_TOKEN", raising=False)
+    article = _article(_product(niche), status="published", published_url="https://deskcred.blog/post")
+    overseer = AudienceOverseer()
+
+    assert not any(f.code == "distribution_unconfigured" for f in overseer.sense())
+
+    monkeypatch.setenv("META_PAGE_ID", "page-1")
+    findings = overseer.sense()
+    assert any(f.code == "distribution_unconfigured" for f in findings)
+
+    monkeypatch.setenv("META_PAGE_ACCESS_TOKEN", "page-token")
+    finding = OverseerFinding(
+        fingerprint="audience|distribution_test",
+        overseer="audience",
+        code="distribution_test",
+        title="test",
+    )
+    db.session.add(finding)
+    db.session.commit()
+    action = OverseerAction(
+        finding_id=finding.id,
+        kind="distribute_to_facebook_page",
+        risk="approval",
+        params_json=json.dumps({"article_id": article.id}),
+        status="proposed",
+    )
+    db.session.add(action)
+    db.session.commit()
+
+    assert any(f.code == "not_distributed" for f in overseer.sense())
+
+    action.status = "approved"
+    db.session.commit()
+    assert any(f.code == "not_distributed" for f in overseer.sense())
+
+    action.status = "applied"
+    db.session.commit()
+    assert not any(f.code == "not_distributed" for f in overseer.sense())
 
 
 # 1 -------------------------------------------------------------------------
